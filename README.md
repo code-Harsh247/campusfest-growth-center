@@ -13,7 +13,7 @@
 | 3-slide strategy (PDF) | `Harsh_Chattar_RISA_Growth_APM_Strategy.pdf`, submitted with this README |
 | Growth Center app, live | https://growth.129-225-109-238.sslip.io |
 | AI copilot | Inside the app: the **Copilot** button, top right |
-| Source code | This repository |
+| Source code | https://github.com/code-Harsh247/campusfest-growth-center (this repository) |
 | Demo video | Not recorded yet |
 
 **The dataset is synthetic.** Every 2025 rate below describes the supplied simulated campaign, not real students in Bengaluru.
@@ -318,7 +318,9 @@ Measured on the live app (27 Nov 2026) with Claude Haiku 5.5:
 **Run locally (no database or Docker needed):**
 
 ```bash
-npm install
+git clone https://github.com/code-Harsh247/campusfest-growth-center.git
+cd campusfest-growth-center
+npm install            # Node.js 22 or later
 npm run dev            # http://localhost:3000; the first start loads the dataset into .data/ (PGlite)
 npm test               # 88 tests
 npm run crosscheck     # independent pandas recomputation, then compare (needs Python with pandas, openpyxl)
