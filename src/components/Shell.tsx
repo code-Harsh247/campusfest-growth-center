@@ -1,62 +1,54 @@
-import Link from "next/link";
 import type { DataWindow } from "@/foundation";
-import { day, withAsOf } from "@/lib/format";
-import { DatePicker } from "./DatePicker";
-
-const NAV = [
-  { href: "/", label: "Overview" },
-  { href: "/campaigns", label: "Campaigns" },
-  { href: "/tasks", label: "Tasks" },
-];
+import type { AsOfNotice } from "@/lib/asof";
+import { day } from "@/lib/format";
+import { Notice } from "./Notice";
+import { TopBar } from "./TopBar";
 
 export function Shell({
-  active, asOf, window: w, notice, children,
+  asOf, window: w, notice, children,
 }: {
-  active: string;
   asOf: string;
   window: DataWindow;
-  notice?: string;
+  notice?: AsOfNotice;
   children: React.ReactNode;
 }) {
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <Link href={withAsOf("/", asOf)} className="brand">Growth Center</Link>
-          <nav className="nav" aria-label="Main">
-            {NAV.map((n) => (
-              <Link key={n.href} href={withAsOf(n.href, asOf)} aria-current={active === n.href ? "page" : undefined}>
-                {n.label}
-              </Link>
-            ))}
-          </nav>
-          <DatePicker value={asOf} min={w.start} max={w.end} />
-        </div>
-      </header>
+      <TopBar asOf={asOf} min={w.start} max={w.end} />
       <main>
-        {notice && <div className="notice">{notice}</div>}
+        {notice && <Notice title={notice.title} text={notice.text} />}
         {children}
-        <p className="footnote">
-          Data: CampusFest 2025, a synthetic dataset covering {day(w.start)} to {day(w.end)}. Every number is
-          shown as it stood at the end of the selected day, India time.
-        </p>
+        <footer className="footnote">
+          Data: CampusFest 2025, a synthetic dataset covering {day(w.start)} to {day(w.end)}. Every number is shown as it
+          stood at the end of the selected day, India time.
+        </footer>
       </main>
     </>
   );
 }
 
-export function Chip({ tone, children }: { tone: "good" | "warn" | "bad" | "neutral"; children: React.ReactNode }) {
-  return <span className={`chip ${tone === "neutral" ? "" : tone}`}>{children}</span>;
+export type Tone = "good" | "warn" | "bad" | "neutral" | "info";
+
+/** A status word with a dot; the word always carries the meaning, never colour alone. */
+export function Pill({ tone, children, className = "" }: { tone: Tone; children: React.ReactNode; className?: string }) {
+  return (
+    <span className={`pill tone-${tone} ${className}`}>
+      <span className="dot" aria-hidden="true" />
+      {children}
+    </span>
+  );
 }
 
-export const toneFor = (status: string | null | undefined): "good" | "warn" | "bad" | "neutral" => {
+export const toneFor = (status: string | null | undefined): Tone => {
   switch (status) {
     case "on track": case "met": case "within budget": case "scale": case "done":
       return "good";
-    case "at risk": case "change": case "in progress": case "blocked":
+    case "at risk": case "change": case "blocked": case "overdue": case "medium":
       return "warn";
-    case "behind": case "missed": case "over budget": case "stop":
+    case "behind": case "missed": case "over budget": case "stop": case "high":
       return "bad";
+    case "in progress":
+      return "info";
     default:
       return "neutral";
   }

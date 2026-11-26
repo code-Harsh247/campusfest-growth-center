@@ -10,15 +10,21 @@ const str = (f: FormData, k: string) => {
   return typeof v === "string" ? v : "";
 };
 
-const back = (asOf: string, extra = "") => `/tasks?asOf=${encodeURIComponent(asOf)}${extra}`;
+const back = (form: FormData, extra: Record<string, string>) => {
+  const params = new URLSearchParams({ asOf: str(form, "asOf") });
+  const show = str(form, "show");
+  if (show) params.set("show", show);
+  for (const [k, v] of Object.entries(extra)) params.set(k, v);
+  return `/tasks?${params.toString()}`;
+};
 
 export async function createTaskAction(form: FormData) {
-  const asOf = str(form, "asOf");
+  const title = str(form, "title").trim();
   try {
     await createTask(
       await getDb(),
       {
-        title: str(form, "title"),
+        title,
         description: str(form, "description"),
         campaign_id: str(form, "campaign_id"),
         owner_id: str(form, "owner_id"),
@@ -29,21 +35,21 @@ export async function createTaskAction(form: FormData) {
       "app user",
     );
   } catch (e) {
-    if (e instanceof EditError) redirect(back(asOf, `&error=${encodeURIComponent(e.message)}`));
+    if (e instanceof EditError) redirect(back(form, { error: e.message }));
     throw e;
   }
   revalidatePath("/", "layout");
-  redirect(back(asOf, "&saved=1"));
+  redirect(back(form, { toast: `Task created: ${title}` }));
 }
 
 export async function updateTaskStatusAction(form: FormData) {
-  const asOf = str(form, "asOf");
+  const status = str(form, "status");
   try {
-    await updateTask(await getDb(), Number(str(form, "task_id")), { status: str(form, "status") }, "app user");
+    await updateTask(await getDb(), Number(str(form, "task_id")), { status }, "app user");
   } catch (e) {
-    if (e instanceof EditError) redirect(back(asOf, `&error=${encodeURIComponent(e.message)}`));
+    if (e instanceof EditError) redirect(back(form, { error: e.message }));
     throw e;
   }
   revalidatePath("/", "layout");
-  redirect(back(asOf));
+  redirect(back(form, { toast: `Saved · status changed to ${status}` }));
 }

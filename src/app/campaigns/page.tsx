@@ -1,7 +1,11 @@
-import { dataWindow, getCampaignTable, getFlags, listTasks } from "@/foundation";
-import { Chip, Shell, toneFor } from "@/components/Shell";
+import Link from "next/link";
+import { Suspense } from "react";
+import { dataWindow, getCampaignTable, getFlags, listTasks, type DataWindow, type Db, type FlagRow } from "@/foundation";
+import { InfoIcon, WarningIcon } from "@/components/icons";
+import { Pill, Shell, toneFor } from "@/components/Shell";
+import { CampaignsSkeleton } from "@/components/Skeletons";
 import { resolveAsOf } from "@/lib/asof";
-import { day, dec, inr, int, pct } from "@/lib/format";
+import { day, dayRange, dec, inr, int, pct } from "@/lib/format";
 import { getDb } from "@/server/db";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +14,25 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const db = await getDb();
   const w = await dataWindow(db);
   const { asOf, notice } = resolveAsOf((await searchParams).asOf, w);
+  return (
+    <Shell asOf={asOf} window={w} notice={notice}>
+      <Suspense key={asOf} fallback={<CampaignsSkeleton />}>
+        <Campaigns db={db} asOf={asOf} w={w} />
+      </Suspense>
+    </Shell>
+  );
+}
 
+const CHANNEL: Record<string, string> = {
+  referrals: "Referral", organic: "Search", college_partners: "Partnerships", community: "Community",
+  ambassadors: "Ambassadors", paid_social: "Social ads", creators: "Creators",
+};
+
+async function Campaigns({ db, asOf, w }: { db: Db; asOf: string; w: DataWindow }) {
   const table = await getCampaignTable(db, asOf);
   const flags = await getFlags(db, asOf);
   const tasks = await listTasks(db, asOf);
+  const preEvent = asOf < w.eventEndsAt.slice(0, 10);
 
   const flagBy = new Map(flags.data.map((r) => [r.campaign_id, r]));
   const openBy = new Map<string, { open: number; overdue: number }>();
@@ -24,89 +43,155 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     if (t.overdue) c.overdue += 1;
     openBy.set(t.campaign_id, c);
   }
-
-  // Best first by expected attendees per Rs 1,000; Unattributed last.
-  const rows = [...table.data].sort((a, b) => {
-    if (a.campaign_id === null) return 1;
-    if (b.campaign_id === null) return -1;
-    return (flagBy.get(b.campaign_id)?.per_1000 ?? -1) - (flagBy.get(a.campaign_id)?.per_1000 ?? -1);
-  });
-  const preEvent = asOf < w.eventEndsAt.slice(0, 10);
+  const campaigns = table.data
+    .filter((r) => r.campaign_id !== null)
+    .sort((a, b) => (flagBy.get(b.campaign_id!)?.per_1000 ?? -1) - (flagBy.get(a.campaign_id!)?.per_1000 ?? -1));
+  const unattributed = table.data.find((r) => r.campaign_id === null);
   const median = flags.data.find((r) => r.benchmark != null)?.benchmark;
 
+  const counts = (["scale", "change", "stop", "insufficient data"] as FlagRow["flag"][])
+    .map((f) => ({ f, n: flags.data.filter((r) => r.flag === f).length }))
+    .filter((x) => x.n > 0);
+  const sum = (k: "spend" | "identified" | "registered" | "confirmed" | "registered_attendees") =>
+    campaigns.reduce((s, r) => s + (r[k] ?? 0), 0);
+  const totalShow = sum("confirmed") ? sum("registered_attendees") / sum("confirmed") : null;
+  const smallSample = table.receipt.warnings.filter((x) => x.includes("fewer than"));
+  const tasksHref = `/tasks?asOf=${asOf}`;
+
   return (
-    <Shell active="/campaigns" asOf={asOf} window={w} notice={notice}>
-      <div className="page-head">
-        <h1>Which campaigns work?</h1>
-        <div className="muted">
-          As of {day(asOf)} · sorted by {preEvent ? "expected" : "verified"} attendees per ₹1,000 · median campaign{" "}
-          {dec(median)}
+    <div className="stack fade-in" style={{ gap: 20 }}>
+      <header className="page-head">
+        <div>
+          <h1>Which campaigns work?</h1>
+          <p>
+            As of {day(asOf)} · sorted by {preEvent ? "estimated" : "verified"} attendees per ₹1,000 · median campaign{" "}
+            {dec(median)}{preEvent ? " (estimate)" : ""}
+          </p>
         </div>
+      </header>
+
+      {preEvent && (
+        <div className="banner info" role="note">
+          <InfoIcon />
+          <div className="grow">
+            <strong>The event has not been held yet ({dayRange(w.eventStartsAt, w.eventEndsAt)}).</strong> Show rate and cost
+            per attendee are not known yet. Attendees per ₹1,000 is an estimate: confirmed registrations × the show-rate
+            benchmark (an assumption).
+          </div>
+        </div>
+      )}
+      {smallSample.map((x) => (
+        <div key={x} className="banner warn"><WarningIcon /><div className="grow">{x} Read with care.</div></div>
+      ))}
+
+      <div className="chips">
+        {counts.map(({ f, n }) => <Pill key={f} tone={toneFor(f)}>{n} {f}</Pill>)}
       </div>
 
-      <section className="card">
-        <div className="table-wrap">
-          <table>
+      <section aria-label="Campaign table" className="table-card">
+        <div className="table-scroll" tabIndex={0} role="region" aria-label="Campaign table, scrolls sideways">
+          <table style={{ minWidth: 1100 }}>
             <thead>
               <tr>
-                <th>Campaign</th>
-                <th>Owner</th>
-                <th className="num">Spend</th>
-                <th className="num">Identified</th>
-                <th className="num">Registered</th>
-                <th className="num">Confirmed</th>
-                <th className="num">Attended</th>
-                <th className="num" title="Attending registrants divided by confirmed registrations">Show rate</th>
-                <th className="num">Cost per confirmed</th>
-                <th className="num">Cost per attendee</th>
-                <th className="num" title={preEvent ? "Confirmed x show-rate benchmark, per Rs 1,000" : "Verified attendees per Rs 1,000"}>
-                  Attendees per ₹1,000
+                <th scope="col" className="t-left t-first">Campaign</th>
+                <th scope="col" className="t-left">Owner</th>
+                <th scope="col">Spend</th>
+                <th scope="col">Identified</th>
+                <th scope="col">Registered</th>
+                <th scope="col">Confirmed</th>
+                <th scope="col">Attended</th>
+                <th scope="col"><abbr title="Show rate: attending registrants divided by confirmed registrations">Show rate</abbr></th>
+                <th scope="col"><abbr title="Cost per confirmed registration: spend divided by confirmed registrations">₹ / confirmed</abbr></th>
+                <th scope="col"><abbr title="Cost per attendee: spend divided by verified attendees">₹ / attendee</abbr></th>
+                <th scope="col" className="sorted">
+                  <abbr title={preEvent ? "Confirmed registrations × the show-rate benchmark, per ₹1,000 of spend. The table is sorted by this column." : "Verified attendees per ₹1,000 of spend. The table is sorted by this column."}>
+                    Att. / ₹1,000
+                  </abbr>{preEvent ? " (est.)" : ""} ↓
                 </th>
-                <th>Flag</th>
-                <th className="num">Open tasks</th>
+                <th scope="col" className="t-left">Flag</th>
+                <th scope="col" className="t-left t-last">Open tasks</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
-                const flag = r.campaign_id ? flagBy.get(r.campaign_id) : undefined;
-                const open = r.campaign_id ? openBy.get(r.campaign_id) : undefined;
+              {campaigns.map((r) => {
+                const flag = flagBy.get(r.campaign_id!);
+                const open = openBy.get(r.campaign_id!);
                 return (
-                  <tr key={r.campaign_id ?? "unattributed"} className={r.campaign_id ? undefined : "subtle"}>
-                    <td>
+                  <tr key={r.campaign_id}>
+                    <th scope="row" className="t-left t-first">
                       <strong>{r.campaign_name}</strong>
-                      {r.channel && <div className="small muted">{r.channel.replace(/_/g, " ")}</div>}
+                      <div className="small muted" style={{ fontWeight: 400 }}>{CHANNEL[r.channel ?? ""] ?? r.channel?.replace(/_/g, " ")}</div>
+                    </th>
+                    <td className="t-left" style={{ color: "var(--text-2)", whiteSpace: "nowrap" }}>{r.owner_name ?? "–"}</td>
+                    <td>{inr(r.spend)}</td>
+                    <td>{int(r.identified)}</td>
+                    <td>{int(r.registered)}</td>
+                    <td>{int(r.confirmed)}</td>
+                    <td>{preEvent ? <span className="after-event">after event</span> : int(r.attendees)}</td>
+                    <td>{preEvent ? <span className="after-event">after event</span> : pct(r.show_rate)}</td>
+                    <td>{inr(r.cost_per_confirmed)}</td>
+                    <td>{preEvent ? <span className="after-event">after event</span> : inr(r.cost_per_attendee)}</td>
+                    <td style={{ fontWeight: 600 }}>{dec(flag?.per_1000)}</td>
+                    <td className="t-left" style={{ minWidth: 120, paddingTop: 10 }}>
+                      {flag ? (
+                        <details className="flag">
+                          <summary className={`tone-${toneFor(flag.flag)}`}>
+                            <span className="dot" aria-hidden="true" style={{ width: 6, height: 6, borderRadius: "50%" }} />
+                            {flag.flag} <u>why</u>
+                          </summary>
+                          <p>{r.campaign_name}: {flag.reason}</p>
+                        </details>
+                      ) : <span className="muted">–</span>}
                     </td>
-                    <td>{r.owner_name ?? "–"}</td>
-                    <td className="num">{inr(r.spend)}</td>
-                    <td className="num">{int(r.identified)}</td>
-                    <td className="num">{int(r.registered)}</td>
-                    <td className="num">{int(r.confirmed)}</td>
-                    <td className="num">{int(r.attendees)}</td>
-                    <td className="num">{preEvent ? "–" : pct(r.show_rate)}</td>
-                    <td className="num">{inr(r.cost_per_confirmed)}</td>
-                    <td className="num">{preEvent ? "–" : inr(r.cost_per_attendee)}</td>
-                    <td className="num">{dec(flag?.per_1000)}</td>
-                    <td>
-                      {flag ? <span title={flag.reason}><Chip tone={toneFor(flag.flag)}>{flag.flag}</Chip></span> : "–"}
-                    </td>
-                    <td className="num">
-                      {open ? (
-                        <>{open.open}{open.overdue ? <span className="small" style={{ color: "var(--bad)" }}> ({open.overdue} overdue)</span> : null}</>
-                      ) : "–"}
+                    <td className="t-left t-last" style={{ whiteSpace: "nowrap" }}>
+                      <Link
+                        href={tasksHref}
+                        style={{ color: open?.overdue ? "var(--bad-fg)" : "var(--muted)", textDecoration: "none", fontWeight: 500 }}
+                      >
+                        {!open ? "none" : open.overdue ? `${open.open} open · ${open.overdue} overdue` : `${open.open} open`}
+                      </Link>
                     </td>
                   </tr>
                 );
               })}
+              {unattributed && (
+                <tr className="subtle">
+                  <th scope="row" className="t-left t-first">
+                    <strong>Unattributed</strong>
+                    <div className="small muted" style={{ fontWeight: 400 }}>Walk-ins</div>
+                  </th>
+                  <td className="t-left">–</td>
+                  <td>–</td>
+                  <td>{int(unattributed.identified)}</td>
+                  <td>{int(unattributed.registered)}</td>
+                  <td>{int(unattributed.confirmed)}</td>
+                  <td>{preEvent ? <span className="after-event">after event</span> : int(unattributed.attendees)}</td>
+                  <td>–</td><td>–</td><td>–</td><td>–</td><td className="t-left">–</td><td className="t-left t-last">–</td>
+                </tr>
+              )}
             </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" className="t-left t-first">All campaigns</th>
+                <td />
+                <td>{inr(sum("spend"))}</td>
+                <td>{int(sum("identified"))}</td>
+                <td>{int(sum("registered"))}</td>
+                <td>{int(sum("confirmed"))}</td>
+                <td>{preEvent ? "" : int(sum("registered_attendees"))}</td>
+                <td>{preEvent ? "" : pct(totalShow)}</td>
+                <td colSpan={5} />
+              </tr>
+            </tfoot>
           </table>
         </div>
-        <ul className="warnings">
-          {table.receipt.warnings.map((x) => <li key={x}>{x}</li>)}
-          {flags.receipt.warnings.map((x) => <li key={x}>{x}</li>)}
-          <li>Flags: scale at 25% or more above the median; stop at more than 25% below for two weekly reads in a row; change otherwise. Hover a flag for its numbers.</li>
-          <li>Unattributed holds walk-ins, who reached the event without a campaign or registration.</li>
-        </ul>
       </section>
-    </Shell>
+
+      <section aria-label="Notes on this table" className="grid-auto-280 notes">
+        <div className="note"><strong>Averages</strong>Costs are averages, not the cost of the next person.</div>
+        <div className="note"><strong>Flag rule</strong>Scale at 25% or more above the median; stop at more than 25% below for two weekly reads in a row; change otherwise. Under 14 days or 50 confirmed shows “insufficient data”.</div>
+        <div className="note"><strong>Unattributed</strong>Unattributed holds walk-ins. They count toward verified attendees, not toward any campaign.</div>
+      </section>
+    </div>
   );
 }
