@@ -1,0 +1,698 @@
+{
+ "source": "check/crosscheck.py (pandas)",
+ "dates": {
+  "2025-02-01": {
+   "totals": {
+    "identified": 364,
+    "registered": 118,
+    "confirmed": 71,
+    "cancelled": 5,
+    "waitlisted": 1,
+    "attendees": 0,
+    "walk_in_attendees": 0,
+    "visitor_days": 0,
+    "spend": 27000,
+    "clicks": 1381,
+    "impressions": 37362
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 10750,
+     "identified": 110,
+     "registered": 52,
+     "confirmed": 31,
+     "attendees": 0
+    },
+    "C02": {
+     "spend": 9600,
+     "identified": 136,
+     "registered": 12,
+     "confirmed": 0,
+     "attendees": 0
+    },
+    "C03": {
+     "spend": 0,
+     "identified": 0,
+     "registered": 0,
+     "confirmed": 0,
+     "attendees": 0
+    },
+    "C04": {
+     "spend": 3150,
+     "identified": 39,
+     "registered": 10,
+     "confirmed": 5,
+     "attendees": 0
+    },
+    "C05": {
+     "spend": 0,
+     "identified": 0,
+     "registered": 0,
+     "confirmed": 0,
+     "attendees": 0
+    },
+    "C06": {
+     "spend": 3500,
+     "identified": 79,
+     "registered": 44,
+     "confirmed": 35,
+     "attendees": 0
+    },
+    "C07": {
+     "spend": 0,
+     "identified": 0,
+     "registered": 0,
+     "confirmed": 0,
+     "attendees": 0
+    },
+    "Unattributed": {
+     "identified": 0,
+     "attendees": 0
+    }
+   },
+   "targets": {
+    "version": "Attendee launch plan",
+    "people": 3200,
+    "registrations": 2800,
+    "attendees": 1800,
+    "budget": 240000
+   }
+  },
+  "2025-02-15": {
+   "totals": {
+    "identified": 1055,
+    "registered": 587,
+    "confirmed": 426,
+    "cancelled": 30,
+    "waitlisted": 16,
+    "attendees": 0,
+    "walk_in_attendees": 0,
+    "visitor_days": 0,
+    "spend": 73475,
+    "clicks": 6352,
+    "impressions": 195938
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 17200,
+     "identified": 228,
+     "registered": 144,
+     "confirmed": 118,
+     "attendees": 0
+    },
+    "C02": {
+     "spend": 24000,
+     "identified": 440,
+     "registered": 241,
+     "confirmed": 171,
+     "attendees": 0
+    },
+    "C03": {
+     "spend": 15250,
+     "identified": 87,
+     "registered": 35,
+     "confirmed": 19,
+     "attendees": 0
+    },
+    "C04": {
+     "spend": 7875,
+     "identified": 96,
+     "registered": 60,
+     "confirmed": 43,
+     "attendees": 0
+    },
+    "C05": {
+     "spend": 1950,
+     "identified": 37,
+     "registered": 10,
+     "confirmed": 3,
+     "attendees": 0
+    },
+    "C06": {
+     "spend": 5600,
+     "identified": 131,
+     "registered": 92,
+     "confirmed": 72,
+     "attendees": 0
+    },
+    "C07": {
+     "spend": 1600,
+     "identified": 36,
+     "registered": 5,
+     "confirmed": 0,
+     "attendees": 0
+    },
+    "Unattributed": {
+     "identified": 0,
+     "attendees": 0
+    }
+   },
+   "targets": {
+    "version": "Attendee launch plan",
+    "people": 3200,
+    "registrations": 2800,
+    "attendees": 1800,
+    "budget": 240000
+   }
+  },
+  "2025-03-01": {
+   "totals": {
+    "identified": 1658,
+    "registered": 1144,
+    "confirmed": 935,
+    "cancelled": 78,
+    "waitlisted": 36,
+    "attendees": 0,
+    "walk_in_attendees": 0,
+    "visitor_days": 0,
+    "spend": 135350,
+    "clicks": 13229,
+    "impressions": 406815
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 23650,
+     "identified": 324,
+     "registered": 235,
+     "confirmed": 201,
+     "attendees": 0
+    },
+    "C02": {
+     "spend": 52800,
+     "identified": 661,
+     "registered": 470,
+     "confirmed": 374,
+     "attendees": 0
+    },
+    "C03": {
+     "spend": 24400,
+     "identified": 197,
+     "registered": 111,
+     "confirmed": 80,
+     "attendees": 0
+    },
+    "C04": {
+     "spend": 12600,
+     "identified": 119,
+     "registered": 92,
+     "confirmed": 84,
+     "attendees": 0
+    },
+    "C05": {
+     "spend": 7800,
+     "identified": 101,
+     "registered": 53,
+     "confirmed": 39,
+     "attendees": 0
+    },
+    "C06": {
+     "spend": 7700,
+     "identified": 164,
+     "registered": 133,
+     "confirmed": 115,
+     "attendees": 0
+    },
+    "C07": {
+     "spend": 6400,
+     "identified": 92,
+     "registered": 50,
+     "confirmed": 42,
+     "attendees": 0
+    },
+    "Unattributed": {
+     "identified": 0,
+     "attendees": 0
+    }
+   },
+   "targets": {
+    "version": "Attendee launch plan",
+    "people": 3200,
+    "registrations": 2800,
+    "attendees": 1800,
+    "budget": 240000
+   }
+  },
+  "2025-03-15": {
+   "totals": {
+    "identified": 2393,
+    "registered": 1562,
+    "confirmed": 1279,
+    "cancelled": 107,
+    "waitlisted": 48,
+    "attendees": 0,
+    "walk_in_attendees": 0,
+    "visitor_days": 0,
+    "spend": 189575,
+    "clicks": 19319,
+    "impressions": 614245
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 30100,
+     "identified": 434,
+     "registered": 318,
+     "confirmed": 277,
+     "attendees": 0
+    },
+    "C02": {
+     "spend": 67200,
+     "identified": 798,
+     "registered": 553,
+     "confirmed": 451,
+     "attendees": 0
+    },
+    "C03": {
+     "spend": 42700,
+     "identified": 310,
+     "registered": 180,
+     "confirmed": 136,
+     "attendees": 0
+    },
+    "C04": {
+     "spend": 17325,
+     "identified": 260,
+     "registered": 141,
+     "confirmed": 101,
+     "attendees": 0
+    },
+    "C05": {
+     "spend": 13650,
+     "identified": 214,
+     "registered": 106,
+     "confirmed": 85,
+     "attendees": 0
+    },
+    "C06": {
+     "spend": 9800,
+     "identified": 217,
+     "registered": 169,
+     "confirmed": 147,
+     "attendees": 0
+    },
+    "C07": {
+     "spend": 8800,
+     "identified": 160,
+     "registered": 95,
+     "confirmed": 82,
+     "attendees": 0
+    },
+    "Unattributed": {
+     "identified": 0,
+     "attendees": 0
+    }
+   },
+   "targets": {
+    "version": "Attendee revised plan",
+    "people": 3600,
+    "registrations": 3200,
+    "attendees": 2200,
+    "budget": 300000
+   }
+  },
+  "2025-04-01": {
+   "totals": {
+    "identified": 3359,
+    "registered": 2383,
+    "confirmed": 2016,
+    "cancelled": 155,
+    "waitlisted": 71,
+    "attendees": 0,
+    "walk_in_attendees": 0,
+    "visitor_days": 0,
+    "spend": 252900,
+    "clicks": 27302,
+    "impressions": 877722
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 38700,
+     "identified": 574,
+     "registered": 460,
+     "confirmed": 404,
+     "attendees": 0
+    },
+    "C02": {
+     "spend": 86400,
+     "identified": 936,
+     "registered": 641,
+     "confirmed": 532,
+     "attendees": 0
+    },
+    "C03": {
+     "spend": 54900,
+     "identified": 471,
+     "registered": 291,
+     "confirmed": 226,
+     "attendees": 0
+    },
+    "C04": {
+     "spend": 28350,
+     "identified": 477,
+     "registered": 345,
+     "confirmed": 297,
+     "attendees": 0
+    },
+    "C05": {
+     "spend": 17550,
+     "identified": 379,
+     "registered": 261,
+     "confirmed": 222,
+     "attendees": 0
+    },
+    "C06": {
+     "spend": 12600,
+     "identified": 279,
+     "registered": 218,
+     "confirmed": 189,
+     "attendees": 0
+    },
+    "C07": {
+     "spend": 14400,
+     "identified": 243,
+     "registered": 167,
+     "confirmed": 146,
+     "attendees": 0
+    },
+    "Unattributed": {
+     "identified": 0,
+     "attendees": 0
+    }
+   },
+   "targets": {
+    "version": "Attendee revised plan",
+    "people": 3600,
+    "registrations": 3200,
+    "attendees": 2200,
+    "budget": 300000
+   }
+  },
+  "2025-04-10": {
+   "totals": {
+    "identified": 3500,
+    "registered": 2800,
+    "confirmed": 2410,
+    "cancelled": 179,
+    "waitlisted": 84,
+    "attendees": 0,
+    "walk_in_attendees": 0,
+    "visitor_days": 0,
+    "spend": 276500,
+    "clicks": 31609,
+    "impressions": 1014070
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 42000,
+     "identified": 600,
+     "registered": 520,
+     "confirmed": 472,
+     "attendees": 0
+    },
+    "C02": {
+     "spend": 93000,
+     "identified": 960,
+     "registered": 680,
+     "confirmed": 578,
+     "attendees": 0
+    },
+    "C03": {
+     "spend": 61000,
+     "identified": 490,
+     "registered": 350,
+     "confirmed": 278,
+     "attendees": 0
+    },
+    "C04": {
+     "spend": 31000,
+     "identified": 500,
+     "registered": 450,
+     "confirmed": 395,
+     "attendees": 0
+    },
+    "C05": {
+     "spend": 19500,
+     "identified": 410,
+     "registered": 350,
+     "confirmed": 291,
+     "attendees": 0
+    },
+    "C06": {
+     "spend": 14000,
+     "identified": 290,
+     "registered": 250,
+     "confirmed": 216,
+     "attendees": 0
+    },
+    "C07": {
+     "spend": 16000,
+     "identified": 250,
+     "registered": 200,
+     "confirmed": 180,
+     "attendees": 0
+    },
+    "Unattributed": {
+     "identified": 0,
+     "attendees": 0
+    }
+   },
+   "targets": {
+    "version": "Attendee revised plan",
+    "people": 3600,
+    "registrations": 3200,
+    "attendees": 2200,
+    "budget": 300000
+   }
+  },
+  "2025-04-12": {
+   "totals": {
+    "identified": 3580,
+    "registered": 2800,
+    "confirmed": 2500,
+    "cancelled": 183,
+    "waitlisted": 88,
+    "attendees": 1430,
+    "walk_in_attendees": 80,
+    "visitor_days": 1430,
+    "spend": 276500,
+    "clicks": 32070,
+    "impressions": 1029015
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 42000,
+     "identified": 600,
+     "registered": 520,
+     "confirmed": 480,
+     "attendees": 267
+    },
+    "C02": {
+     "spend": 93000,
+     "identified": 960,
+     "registered": 680,
+     "confirmed": 580,
+     "attendees": 240
+    },
+    "C03": {
+     "spend": 61000,
+     "identified": 490,
+     "registered": 350,
+     "confirmed": 290,
+     "attendees": 129
+    },
+    "C04": {
+     "spend": 31000,
+     "identified": 500,
+     "registered": 450,
+     "confirmed": 420,
+     "attendees": 266
+    },
+    "C05": {
+     "spend": 19500,
+     "identified": 410,
+     "registered": 350,
+     "confirmed": 320,
+     "attendees": 197
+    },
+    "C06": {
+     "spend": 14000,
+     "identified": 290,
+     "registered": 250,
+     "confirmed": 225,
+     "attendees": 136
+    },
+    "C07": {
+     "spend": 16000,
+     "identified": 250,
+     "registered": 200,
+     "confirmed": 185,
+     "attendees": 115
+    },
+    "Unattributed": {
+     "identified": 80,
+     "attendees": 80
+    }
+   },
+   "targets": {
+    "version": "Attendee revised plan",
+    "people": 3600,
+    "registrations": 3200,
+    "attendees": 2200,
+    "budget": 300000
+   }
+  },
+  "2025-04-13": {
+   "totals": {
+    "identified": 3625,
+    "registered": 2800,
+    "confirmed": 2500,
+    "cancelled": 183,
+    "waitlisted": 88,
+    "attendees": 2050,
+    "walk_in_attendees": 125,
+    "visitor_days": 2775,
+    "spend": 276500,
+    "clicks": 32070,
+    "impressions": 1029015
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 42000,
+     "identified": 600,
+     "registered": 520,
+     "confirmed": 480,
+     "attendees": 390
+    },
+    "C02": {
+     "spend": 93000,
+     "identified": 960,
+     "registered": 680,
+     "confirmed": 580,
+     "attendees": 340
+    },
+    "C03": {
+     "spend": 61000,
+     "identified": 490,
+     "registered": 350,
+     "confirmed": 290,
+     "attendees": 175
+    },
+    "C04": {
+     "spend": 31000,
+     "identified": 500,
+     "registered": 450,
+     "confirmed": 420,
+     "attendees": 385
+    },
+    "C05": {
+     "spend": 19500,
+     "identified": 410,
+     "registered": 350,
+     "confirmed": 320,
+     "attendees": 275
+    },
+    "C06": {
+     "spend": 14000,
+     "identified": 290,
+     "registered": 250,
+     "confirmed": 225,
+     "attendees": 195
+    },
+    "C07": {
+     "spend": 16000,
+     "identified": 250,
+     "registered": 200,
+     "confirmed": 185,
+     "attendees": 165
+    },
+    "Unattributed": {
+     "identified": 125,
+     "attendees": 125
+    }
+   },
+   "targets": {
+    "version": "Attendee revised plan",
+    "people": 3600,
+    "registrations": 3200,
+    "attendees": 2200,
+    "budget": 300000
+   }
+  },
+  "2025-04-20": {
+   "totals": {
+    "identified": 3625,
+    "registered": 2800,
+    "confirmed": 2500,
+    "cancelled": 183,
+    "waitlisted": 88,
+    "attendees": 2050,
+    "walk_in_attendees": 125,
+    "visitor_days": 2775,
+    "spend": 274000,
+    "clicks": 32070,
+    "impressions": 1029015
+   },
+   "campaigns": {
+    "C01": {
+     "spend": 42000,
+     "identified": 600,
+     "registered": 520,
+     "confirmed": 480,
+     "attendees": 390
+    },
+    "C02": {
+     "spend": 93000,
+     "identified": 960,
+     "registered": 680,
+     "confirmed": 580,
+     "attendees": 340
+    },
+    "C03": {
+     "spend": 59000,
+     "identified": 490,
+     "registered": 350,
+     "confirmed": 290,
+     "attendees": 175
+    },
+    "C04": {
+     "spend": 31000,
+     "identified": 500,
+     "registered": 450,
+     "confirmed": 420,
+     "attendees": 385
+    },
+    "C05": {
+     "spend": 19000,
+     "identified": 410,
+     "registered": 350,
+     "confirmed": 320,
+     "attendees": 275
+    },
+    "C06": {
+     "spend": 14000,
+     "identified": 290,
+     "registered": 250,
+     "confirmed": 225,
+     "attendees": 195
+    },
+    "C07": {
+     "spend": 16000,
+     "identified": 250,
+     "registered": 200,
+     "confirmed": 185,
+     "attendees": 165
+    },
+    "Unattributed": {
+     "identified": 125,
+     "attendees": 125
+    }
+   },
+   "targets": {
+    "version": "Attendee revised plan",
+    "people": 3600,
+    "registrations": 3200,
+    "attendees": 2200,
+    "budget": 300000
+   }
+  }
+ }
+}
