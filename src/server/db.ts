@@ -1,6 +1,7 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { loadDataset, migrate, openPglite, openPostgres, parseSnapshot, refreshStatistics, type Db } from "@/foundation";
+import { loadDataset, migrate, openPglite, openPostgres, refreshStatistics, type Db } from "@/foundation";
+import { suppliedDataset } from "./dataset";
 
 function localDir(): string {
   const dir = process.env.PGLITE_DIR ?? path.join(process.cwd(), ".data", "pglite");
@@ -23,8 +24,7 @@ async function init(): Promise<Db> {
   await refreshStatistics(db); // statistics may be missing after a restart
   const [{ n }] = await db.query<{ n: number }>("select count(*)::int as n from original.event");
   if (n === 0) {
-    const file = path.join(process.cwd(), "data", "attendee-dataset.json");
-    await loadDataset(db, parseSnapshot(JSON.parse(readFileSync(file, "utf8"))), "system");
+    await loadDataset(db, suppliedDataset(), "system");
   }
   return db;
 }

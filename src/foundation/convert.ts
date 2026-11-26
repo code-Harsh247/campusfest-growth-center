@@ -74,6 +74,12 @@ function toIndiaWallClock(v: unknown, name: string): string {
   const m = s.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/);
   if (!m) throw new Error(`${name} must be a date like 2025-04-12 or 2025-04-12 10:00, got "${s}"`);
   const [, day, hh = "00", mm = "00", ss = "00", offset] = m;
+  const [y, mo, d] = day.split("-").map(Number);
+  const real = new Date(Date.UTC(y, mo - 1, d));
+  if (real.getUTCFullYear() !== y || real.getUTCMonth() !== mo - 1 || real.getUTCDate() !== d) {
+    throw new Error(`${name} ${day} is not a real date`);
+  }
+  if (Number(hh) > 23 || Number(mm) > 59 || Number(ss) > 59) throw new Error(`${name} ${s} is not a real time`);
   if (!offset) return `${day} ${hh}:${mm}:${ss}`;
   const instant = Date.parse(`${day}T${hh}:${mm}:${ss}${offset === "Z" ? "Z" : offset.replace(/^([+-]\d{2})(\d{2})$/, "$1:$2")}`);
   if (Number.isNaN(instant)) throw new Error(`${name} is not a valid date: "${s}"`);

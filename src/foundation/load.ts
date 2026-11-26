@@ -89,7 +89,36 @@ export function normalise(raw: Map<string, Record<string, unknown>[]>, source: s
     });
   }
   if (problems.length) throw new DatasetError(problems);
+  checkReferences(tables, problems);
+  if (problems.length) throw new DatasetError(problems);
+  if (!tables.get("event")?.length) throw new DatasetError(["The Event sheet has no rows."]);
   return { source, tables, report };
+}
+
+/** Records that must point to an existing record; grouped so a broken file gives a short list. */
+const REFERENCE_CHECKS: [string, string, string, string][] = [
+  ["registrations", "person_id", "people", "person_id"],
+  ["registration_history", "registration_id", "registrations", "registration_id"],
+  ["registration_history", "person_id", "people", "person_id"],
+  ["checkins", "person_id", "people", "person_id"],
+  ["checkins", "registration_id", "registrations", "registration_id"],
+  ["interactions", "person_id", "people", "person_id"],
+];
+
+function checkReferences(tables: Map<string, Row[]>, problems: string[]): void {
+  for (const [table, col, target, key] of REFERENCE_CHECKS) {
+    const known = new Set((tables.get(target) ?? []).map((r) => String(r[key])));
+    const missing = new Map<string, number>();
+    for (const r of tables.get(table) ?? []) {
+      const v = r[col];
+      if (v !== null && v !== undefined && !known.has(String(v))) missing.set(String(v), (missing.get(String(v)) ?? 0) + 1);
+    }
+    if (missing.size) {
+      const sample = [...missing.keys()].slice(0, 3).map((x) => `"${x}"`).join(", ");
+      const rows = [...missing.values()].reduce((a, b) => a + b, 0);
+      problems.push(`${table}: ${rows} row(s) point to a ${col} not in ${target} (${sample}${missing.size > 3 ? ", …" : ""}).`);
+    }
+  }
 }
 
 async function insertRows(db: Db, schema: string, spec: TableSpec, rows: Row[]): Promise<void> {
@@ -113,8 +142,14 @@ async function insertRows(db: Db, schema: string, spec: TableSpec, rows: Row[]):
  * Replaces the original and working copies with a parsed dataset, records what
  * the loader removed, and logs the load. Tasks and assumptions are untouched.
  */
-export async function loadDataset(db: Db, data: ParsedDataset, actor = "system"): Promise<void> {
+export async function loadDataset(
+  db: Db,
+  data: ParsedDataset,
+  actor = "system",
+  opts: { reset?: boolean; clearTasks?: boolean } = {},
+): Promise<void> {
   await db.transaction(async (tx) => {
+    if (opts.clearTasks) await tx.exec("delete from app.tasks;");
     for (const spec of TABLES) {
       await tx.exec(`truncate original.${spec.table}; truncate working.${spec.table};`);
       await insertRows(tx, "original", spec, data.tables.get(spec.table) ?? []);
@@ -135,8 +170,15 @@ export async function loadDataset(db: Db, data: ParsedDataset, actor = "system")
       order by owner_id
       on conflict (owner_id) do nothing;`);
     await tx.query(
-      `insert into app.edit_log (actor, action, note, after) values ($1, 'load', $2, $3)`,
-      [actor, `Loaded ${data.source}`, JSON.stringify(data.report)],
+      `insert into app.edit_log (actor, action, note, after) values ($1, $2, $3, $4)`,
+      [
+        actor,
+        opts.reset ? "reset" : "load",
+        opts.reset
+          ? `Reset to ${data.source}${opts.clearTasks ? "; tasks cleared" : "; tasks kept"}`
+          : `Loaded ${data.source}`,
+        JSON.stringify(data.report),
+      ],
     );
   });
   await refreshStatistics(db);

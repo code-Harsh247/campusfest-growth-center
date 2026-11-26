@@ -6,3 +6,6 @@ export * from "./edits";
 export * from "./metrics";
 export * from "./catalog";
 export * from "./tasks";
+export * from "./impact";
+export * from "./history";
+export * from "./snapshot";
