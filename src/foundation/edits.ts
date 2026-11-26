@@ -1,6 +1,6 @@
 import type { Db } from "./db";
 import { convertValue } from "./convert";
-import type { Row } from "./load";
+import { refreshStatistics, type Row } from "./load";
 import { TABLE_BY_NAME, TABLES, type TableSpec } from "./spec";
 
 /**
@@ -233,10 +233,12 @@ export async function undoEdit(db: Db, editId: number, actor: string): Promise<E
 
 /** Restores every source table's working copy from the original. Tasks are kept. */
 export async function resetWorkingCopy(db: Db, actor: string): Promise<number> {
-  return db.transaction(async (tx) => {
+  const editId = await db.transaction(async (tx) => {
     for (const spec of TABLES) {
       await tx.exec(`truncate working.${spec.table}; insert into working.${spec.table} select * from original.${spec.table};`);
     }
     return log(tx, { actor, action: "reset", note: "Working copy restored from the original dataset" });
   });
+  await refreshStatistics(db);
+  return editId;
 }

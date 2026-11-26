@@ -41,6 +41,10 @@ describe("targets in force", () => {
     expect(round(by.registrations.attainment, 3)).toBe(0.875);
     expect(round(by.verified_attendees.attainment, 3)).toBe(0.932);
     expect(by.verified_attendees.status).toBe("missed");
+    // Past each deadline the verdict is met or missed, not a pace.
+    expect(by.identified_people.status).toBe("met");
+    expect(by.registrations.status).toBe("missed");
+    expect(by.registrations.expected_to_date).toBeNull();
     expect(by.marketing_budget.goal - by.marketing_budget.actual).toBe(26000);
     expect(by.marketing_budget.status).toBe("within budget");
   });

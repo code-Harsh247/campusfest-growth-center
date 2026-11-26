@@ -79,3 +79,12 @@ function toIndiaWallClock(v: unknown, name: string): string {
   if (Number.isNaN(instant)) throw new Error(`${name} is not a valid date: "${s}"`);
   return formatUtcParts(new Date(instant + IST_OFFSET_MS));
 }
+
+/** A spreadsheet cell as a JSON-safe value: dates become India wall-clock text. */
+export function cellToJson(raw: unknown): string | number | boolean | null {
+  const v = unwrapCell(raw);
+  if (v === null || v === undefined) return null;
+  if (v instanceof Date) return formatUtcParts(new Date(Math.round(v.getTime() / 1000) * 1000));
+  if (typeof v === "number" || typeof v === "boolean") return v;
+  return String(v);
+}

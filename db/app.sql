@@ -64,3 +64,26 @@ create table if not exists app.edit_log (
   note       text,
   undone_by  bigint references app.edit_log (edit_id)
 );
+
+-- People who own campaigns and tasks. Seeded from the campaign owners on load.
+create table if not exists app.team (
+  owner_id text primary key,
+  name     text not null,
+  role     text not null default 'Campaign owner'
+);
+
+create table if not exists app.tasks (
+  task_id         bigserial primary key,
+  title           text not null check (length(title) between 1 and 200),
+  description     text,
+  campaign_id     text,                -- a working.campaigns ID, or null for cross-campaign work
+  owner_id        text references app.team (owner_id),
+  due_date        date,
+  status          text not null default 'to do' check (status in ('to do', 'in progress', 'blocked', 'done')),
+  priority        text not null default 'medium' check (priority in ('high', 'medium', 'low')),
+  source          text not null default 'manual' check (source in ('manual', 'flag', 'chatbot', 'seed')),
+  metric_snapshot jsonb,               -- the metric and value that prompted the task, for the impact check
+  outcome_note    text,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);

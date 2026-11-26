@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import pg from "pg";
 
 /**
  * The only database surface the foundation uses. Tests and local runs use
@@ -48,7 +49,7 @@ function wrap(conn: Conn, root?: PGlite): Db {
 
 /** An in-memory Postgres for tests, or a persistent one when `dataDir` is given. */
 export async function openPglite(dataDir?: string): Promise<Db> {
-  const pg = await PGlite.create(dataDir, {
+  const lite = await PGlite.create(dataDir, {
     parsers: {
       [DATE_OID]: (v: string) => v,
       [TIMESTAMP_OID]: (v: string) => v,
@@ -56,5 +57,48 @@ export async function openPglite(dataDir?: string): Promise<Db> {
       [NUMERIC_OID]: (v: string) => Number(v),
     },
   });
-  return wrap(pg, pg);
+  return wrap(lite, lite);
+}
+
+/** A PostgreSQL server (the hosted app). Same parsing rules as PGlite. */
+export async function openPostgres(connectionString: string): Promise<Db> {
+  const pool = new pg.Pool({ connectionString, max: 5 });
+  const types = {
+    getTypeParser(oid: number, format?: "text" | "binary") {
+      if (oid === DATE_OID || oid === TIMESTAMP_OID) return (v: string) => v;
+      if (oid === INT8_OID || oid === NUMERIC_OID) return (v: string) => Number(v);
+      return pg.types.getTypeParser(oid, format);
+    },
+  } as pg.CustomTypesConfig;
+
+  const make = (client: pg.Pool | pg.PoolClient, inTransaction: boolean): Db => ({
+    async query<T>(sql: string, params: unknown[] = []) {
+      const res = await client.query({ text: sql, values: params, types });
+      return res.rows as T[];
+    },
+    async exec(sql: string) {
+      // No values: node-postgres uses the simple protocol, which allows several statements.
+      await client.query({ text: sql, types });
+    },
+    async transaction<T>(fn: (tx: Db) => Promise<T>) {
+      if (inTransaction) return fn(make(client, true));
+      const c = await pool.connect();
+      try {
+        await c.query("begin");
+        const out = await fn(make(c, true));
+        await c.query("commit");
+        return out;
+      } catch (e) {
+        await c.query("rollback");
+        throw e;
+      } finally {
+        c.release();
+      }
+    },
+    async close() {
+      await pool.end();
+    },
+  });
+  await pool.query("select 1"); // fail fast on a bad connection string
+  return make(pool, false);
 }

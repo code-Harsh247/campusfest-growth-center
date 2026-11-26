@@ -1,35 +1,47 @@
 # Growth Center
 
 Command center for the CampusFest attendee-growth campaign (RISA Labs Growth APM assignment, Challenge A).
-This repository currently holds the **data foundation**: the database, the loader, the SQL metric layer and its tests.
-The dashboard, task manager and copilot are built on top of it next.
 
-## Quick start
+Built so far:
+- **Data foundation:** the loader, a SQL metric layer, edits with undo and reset, and the tests.
+- **Thin app:** an overview, a campaign table and a task list, with a date picker that replays the campaign as it stood on any day.
+
+Next: the Data and Plan screens, then the AI copilot.
+
+## Run it locally
 
 ```bash
 npm install
-npm test              # 40 tests: reference values, invariants, leakage, edits, cross-check
+npm run dev           # http://localhost:3000 — the first start loads the dataset into .data/ (PGlite)
+npm test              # 46 tests: reference values, invariants, leakage, edits, tasks, snapshot, cross-check
 npm run crosscheck    # recompute expectations with pandas, then compare (needs Python with pandas and openpyxl)
-npx tsx scripts/smoke.ts   # load the workbook and print the funnel at three dates
 ```
 
-Tests run against [PGlite](https://pglite.dev), Postgres compiled to WebAssembly, so no database server or Docker is needed.
-The hosted app will run the same SQL on PostgreSQL.
+Without `DATABASE_URL`, the app uses [PGlite](https://pglite.dev), which is Postgres compiled to WebAssembly and stored in `.data/`.
+No database server or Docker is needed. With `DATABASE_URL` set, it uses PostgreSQL.
+
+## Deploy (Docker Compose)
+
+```bash
+cp .env.example .env            # then set a long random POSTGRES_PASSWORD
+docker compose up -d --build    # app and PostgreSQL; the app joins the external `web` network as `growth-center`
+```
+
+An HTTPS reverse proxy on the same `web` network forwards to `growth-center:3000`.
+No ports are published on the host.
 
 ## Layout
 
 | Path | What it holds |
 | --- | --- |
 | `data/attendee-dataset.xlsx` | The supplied dataset, unchanged |
-| `src/foundation/spec.ts` | One definition per source table; generates the tables and drives the loader |
-| `src/foundation/load.ts` | Reads the workbook, converts and validates every value, removes import repeats |
-| `src/foundation/edits.ts` | Validated edits to the working copy, the edit log, undo and reset |
-| `src/foundation/metrics.ts` | The interface the app and copilot call; every result carries a receipt |
-| `src/foundation/catalog.ts` | Metric definitions and the questions the data cannot answer |
-| `db/app.sql` | Load report, assumptions (each tagged D, R, A or S) and the edit log |
-| `db/metrics.sql` | The metric layer: every number is computed here, at a selected date |
+| `data/attendee-dataset.json` | The same rows as JSON, which the app loads. Regenerate it with `npx tsx scripts/export-dataset.ts`; a test checks it still matches the workbook |
+| `src/foundation/` | Everything about the data: spec, loader, edits, tasks, metrics interface, metric catalog |
+| `db/app.sql`, `db/metrics.sql` | App tables (assumptions, edit log, team, tasks) and the metric layer; every number is computed in SQL |
+| `src/app/` | The Next.js pages: overview, campaigns, tasks |
+| `src/server/db.ts` | Opens PGlite or PostgreSQL and loads the dataset on first start |
 | `check/crosscheck.py` | An independent pandas implementation; its output is `check/expected.json` |
-| `tests/` | Reference values, invariants and the cross-check |
+| `tests/` | Reference values, invariants, tasks, snapshot and cross-check |
 
 ## How the data is counted
 
@@ -42,7 +54,8 @@ The hosted app will run the same SQL on PostgreSQL.
 - A person is credited to their registration's campaign, else their first campaign. Walk-ins are Unattributed.
 - Spend is net posted spend, vendor credits included, by activity date.
 - Rows repeated with the same stable ID are import retries and are counted once.
-- The original data is kept read-only. Edits go to a working copy, are logged with before and after values, and can be undone or reset.
+- The original data is read-only. Edits go to a working copy, are logged with before and after values, and can be undone or reset.
+- Task deadlines are judged against the selected date, so a replay shows what was overdue then.
 
 ## Reference values (20 Apr 2025)
 
@@ -57,6 +70,8 @@ The hosted app will run the same SQL on PostgreSQL.
 
 ## Known limitations
 
-- PGlite answers a metric call in about half a second on a laptop. PostgreSQL should be faster, but this has not been measured yet.
-- `exceljs` depends on a `uuid` version with a moderate advisory (`npm audit`). We only read files with it. The upload path in the app needs a review before it accepts files from visitors.
-- The show-rate benchmark (0.70) is a placeholder until its source is read and checked. It is labelled as such wherever it is used.
+- **PostgreSQL untested:** the adapter has not yet run against a real PostgreSQL server. Docker was not running on the build machine, so it will first be exercised on deployment.
+- **Statistics after loading:** freshly loaded tables need `ANALYZE`, or the query planner treats them as empty and pages slow from about 0.2 to 4 seconds or more. The app runs it after every load, reset and start.
+- **Spreadsheet library:** `exceljs` is used only by scripts and tests, never by the server. It depends on a `uuid` version with a moderate advisory (`npm audit`).
+- **Show-rate benchmark:** the 0.70 benchmark is a placeholder until its source is read and checked. It is labelled as such wherever it is used.
+- **Open demo:** there are no accounts. Anyone with the link can create tasks.

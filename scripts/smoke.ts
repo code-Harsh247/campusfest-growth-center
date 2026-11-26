@@ -1,6 +1,7 @@
 import { openPglite } from "../src/foundation/db";
 import { migrate } from "../src/foundation/schema";
-import { parseWorkbook, loadDataset } from "../src/foundation/load";
+import { loadDataset } from "../src/foundation/load";
+import { parseWorkbook } from "../src/foundation/workbook";
 
 const t0 = Date.now();
 const db = await openPglite();

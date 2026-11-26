@@ -1,0 +1,10 @@
+node_modules
+.next
+.data
+.git
+.env
+*.log
+data/*.xlsx
+check
+tests
+scripts

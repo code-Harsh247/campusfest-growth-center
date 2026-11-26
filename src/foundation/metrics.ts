@@ -232,7 +232,7 @@ export async function getFlags(db: Db, asOf: string): Promise<Result<FlagRow[]>>
       reason = "Not enough data yet: under 14 days of activity and fewer than 50 confirmed registrations, or no spend.";
     } else {
       reason =
-        `${r.per_1000.toFixed(1)} attendees per INR 1,000 against a median of ${r.benchmark.toFixed(1)} ` +
+        `${r.per_1000.toFixed(1)} attendees per ₹1,000 against a median of ${r.benchmark.toFixed(1)} ` +
         `(${pct(r.ratio - 1)}).`;
       if (r.flag === "stop") reason += " More than 25% below the median for two weekly reads in a row.";
       if (r.flag === "change" && r.ratio < 0.75) reason += " Below the stop line once; stop if the next weekly read agrees.";

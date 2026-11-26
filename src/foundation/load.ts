@@ -1,4 +1,3 @@
-import ExcelJS from "exceljs";
 import type { Db } from "./db";
 import { convertValue } from "./convert";
 import { TABLES, type TableSpec } from "./spec";
@@ -25,41 +24,33 @@ export class DatasetError extends Error {
   }
 }
 
-/** Reads the supplied workbook layout. Refuses the whole file if any row is invalid. */
-export async function parseWorkbook(input: string | Buffer, source = "workbook"): Promise<ParsedDataset> {
-  const wb = new ExcelJS.Workbook();
-  if (typeof input === "string") await wb.xlsx.readFile(input);
-  else await wb.xlsx.load(input as unknown as ArrayBuffer);
+/**
+ * A dataset as plain JSON: every source row exactly as read, import repeats
+ * included, so loading it gives the same load report as the workbook.
+ * Produced by scripts/export-dataset.ts; the app loads this instead of the
+ * workbook, which keeps the spreadsheet library out of the server.
+ */
+export interface DatasetSnapshot {
+  source: string;
+  tables: Record<string, { columns: string[]; rows: unknown[][] }>;
+}
 
+export function parseSnapshot(snap: DatasetSnapshot): ParsedDataset {
   const problems: string[] = [];
   const raw = new Map<string, Record<string, unknown>[]>();
-
   for (const spec of TABLES) {
-    const ws = wb.getWorksheet(spec.sheet);
-    if (!ws) {
-      problems.push(`Missing sheet "${spec.sheet}"`);
+    const t = snap.tables[spec.table];
+    if (!t) {
+      problems.push(`Missing table "${spec.table}"`);
       continue;
     }
-    // exceljs returns a sparse, 1-based array; Array.from fills the gaps.
-    const header = Array.from(ws.getRow(1).values as unknown[], (h) => (h == null ? "" : String(h).trim()));
-    const colIndex = new Map(header.map((h, i) => [h, i]));
     for (const col of spec.columns) {
-      if (!colIndex.has(col.name)) problems.push(`Sheet "${spec.sheet}" has no column "${col.name}"`);
+      if (!t.columns.includes(col.name)) problems.push(`Table "${spec.table}" has no column "${col.name}"`);
     }
-    const rows: Record<string, unknown>[] = [];
-    ws.eachRow({ includeEmpty: false }, (row, n) => {
-      if (n === 1) return;
-      const values = row.values as unknown[];
-      const rec: Record<string, unknown> = {};
-      for (const col of spec.columns) rec[col.name] = values[colIndex.get(col.name) ?? -1];
-      if (Object.values(rec).every((x) => x == null || x === "")) return;
-      rec.__row = n;
-      rows.push(rec);
-    });
-    raw.set(spec.table, rows);
+    raw.set(spec.table, t.rows.map((r) => Object.fromEntries(t.columns.map((c, i) => [c, r[i]]))));
   }
   if (problems.length) throw new DatasetError(problems);
-  return normalise(raw, source);
+  return normalise(raw, snap.source);
 }
 
 /** Converts, validates and removes import repeats. Shared by every input format. */
@@ -137,9 +128,24 @@ export async function loadDataset(db: Db, data: ParsedDataset, actor = "system")
         [r.table, data.source, r.rawRows, r.uniqueRows, r.repeatedRows, r.conflictingIds],
       );
     }
+    await tx.exec(`
+      insert into app.team (owner_id, name)
+      select distinct on (owner_id) owner_id, owner_name from working.campaigns
+      where owner_id is not null and owner_name is not null
+      order by owner_id
+      on conflict (owner_id) do nothing;`);
     await tx.query(
       `insert into app.edit_log (actor, action, note, after) values ($1, 'load', $2, $3)`,
       [actor, `Loaded ${data.source}`, JSON.stringify(data.report)],
     );
   });
+  await refreshStatistics(db);
+}
+
+/**
+ * Refreshes the planner's table statistics. Without this, freshly loaded tables
+ * look empty to the planner, which then picks joins that are 60x slower.
+ */
+export async function refreshStatistics(db: Db): Promise<void> {
+  await db.exec(TABLES.map((t) => `analyze working.${t.table};`).join(" "));
 }

@@ -258,28 +258,35 @@ language sql stable as $$
   sh as (
     select least(greatest((as_of - d.s + 1)::float8 / nullif(d.c - d.s + 1, 0), 0), 1) as reg_share,
            least(greatest((as_of - d.s + 1)::float8 / nullif(d.ev - d.s + 1, 0), 0), 1) as ev_share,
-           as_of >= d.ev as post_event
+           as_of >= d.ev as post_event,
+           as_of > d.c as after_close
     from d
   ),
+  -- `final`: the deadline has passed, so the verdict is met or missed, not a pace.
+  -- People can still be identified at the event (walk-ins); registrations stop at close.
   r as (
     select 1 as ord, 'identified_people' as target, f.identified::float8 as actual,
-           t.identified_external_people_goal::float8 as goal, sh.reg_share as share, t.target_version
+           t.identified_external_people_goal::float8 as goal, sh.reg_share as share,
+           sh.post_event as final, t.target_version
     from t, f, sh
     union all
-    select 2, 'registrations', f.registered, t.registration_goal, sh.reg_share, t.target_version from t, f, sh
+    select 2, 'registrations', f.registered, t.registration_goal, sh.reg_share, sh.after_close, t.target_version
+    from t, f, sh
     union all
-    select 3, 'verified_attendees', f.attendees, t.unique_external_visitors_goal, null, t.target_version from t, f, sh
+    select 3, 'verified_attendees', f.attendees, t.unique_external_visitors_goal, null, sh.post_event, t.target_version
+    from t, f, sh
     union all
-    select 4, 'marketing_budget', f.spend, t.marketing_budget_inr, sh.ev_share, t.target_version from t, f, sh
+    select 4, 'marketing_budget', f.spend, t.marketing_budget_inr, sh.ev_share, false, t.target_version
+    from t, f, sh
   )
   select r.target, r.actual, r.goal, r.actual / nullif(r.goal, 0),
-         r.goal * r.share,
+         case when r.final then null else r.goal * r.share end,
          case
            when r.target = 'marketing_budget' then
              case when r.actual > r.goal then 'over budget' else 'within budget' end
-           when r.target = 'verified_attendees' then
-             case when not (select post_event from sh) then null
-                  when r.actual >= r.goal then 'met' else 'missed' end
+           when r.final then
+             case when r.actual >= r.goal then 'met' else 'missed' end
+           when r.target = 'verified_attendees' then null
            when r.actual >= metrics.anum('pace_on_track') * r.goal * r.share then 'on track'
            when r.actual >= metrics.anum('pace_at_risk') * r.goal * r.share then 'at risk'
            else 'behind'

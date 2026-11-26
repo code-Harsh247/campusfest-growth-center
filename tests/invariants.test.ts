@@ -6,9 +6,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   EditError, TABLES, deleteRecord, getCampaignTable, getFlags, getFunnel, getProjection,
-  getTargetStatus, getWeekly, insertRecord, loadDataset, parseWorkbook, resetWorkingCopy,
+  getTargetStatus, getWeekly, insertRecord, loadDataset, resetWorkingCopy,
   undoEdit, updateRecord, type Db,
 } from "../src/foundation";
+import { parseWorkbook } from "../src/foundation/workbook";
 import { WORKBOOK, freshDb, round } from "./helpers";
 
 let db: Db;
