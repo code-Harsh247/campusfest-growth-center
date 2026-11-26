@@ -11,7 +11,8 @@
     "crosscheck": "python -I check/crosscheck.py data/attendee-dataset.xlsx check/expected.json && vitest run tests/crosscheck.test.ts",
     "typecheck": "tsc --noEmit",
     "eval:copilot": "tsx scripts/eval-copilot.ts",
-    "fake:anthropic": "tsx scripts/fake-anthropic.ts"
+    "fake:anthropic": "tsx scripts/fake-anthropic.ts",
+    "strategy": "tsx scripts/strategy-model.ts && tsx scripts/strategy-model.ts --sensitivity && tsx scripts/strategy-evidence.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",
