@@ -110,3 +110,43 @@ create table if not exists app.planned_budgets (
   set_by      text not null,
   as_of       date not null              -- the selected date the plan was made on
 );
+
+-- Suggestions waiting for a person's decision. The copilot can only propose;
+-- a click on the confirmation card accepts (creating a task) or dismisses.
+create table if not exists app.action_items (
+  item_id        bigserial primary key,
+  source         text not null default 'chatbot' check (source in ('chatbot', 'flag', 'alert')),
+  title          text not null,
+  campaign_id    text,
+  owner_id       text,
+  due_date       date,
+  priority       text not null default 'medium' check (priority in ('high', 'medium', 'low')),
+  reason         text not null,
+  metric         jsonb,              -- the metric and value behind the suggestion
+  as_of          date not null,      -- the selected date when it was proposed
+  status         text not null default 'proposed' check (status in ('proposed', 'accepted', 'dismissed')),
+  dismiss_reason text,
+  task_id        bigint references app.tasks (task_id) on delete set null,
+  created_at     timestamptz not null default now(),
+  decided_at     timestamptz
+);
+
+-- One row per copilot question: what was asked, which tools ran, what came back.
+-- Used to debug wrong answers and to find new test questions. The data is synthetic.
+create table if not exists app.copilot_log (
+  log_id        bigserial primary key,
+  at            timestamptz not null default now(),
+  visitor       text,                -- a hash, never the address itself
+  question      text not null,
+  as_of         date,
+  screen        text,
+  tool_calls    jsonb not null default '[]',
+  answer        text,
+  stop_reason   text,
+  ungrounded    jsonb,               -- numbers in the answer no tool returned
+  error         text,
+  ms            integer,
+  input_tokens  integer,
+  output_tokens integer,
+  cache_read_tokens integer
+);

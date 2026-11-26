@@ -150,7 +150,7 @@ export async function loadDataset(
   opts: { reset?: boolean; clearTasks?: boolean } = {},
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    if (opts.clearTasks) await tx.exec("delete from app.tasks; delete from app.planned_budgets;");
+    if (opts.clearTasks) await tx.exec("delete from app.action_items; delete from app.tasks; delete from app.planned_budgets;");
     // A reset returns every number to the original, so changed assumptions go back too.
     const restored = opts.reset
       ? await tx.query(

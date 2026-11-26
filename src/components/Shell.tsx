@@ -2,6 +2,7 @@ import type { DataWindow } from "@/foundation";
 import type { AsOfNotice } from "@/lib/asof";
 import { day } from "@/lib/format";
 import { Notice } from "./Notice";
+import { Copilot } from "./Copilot";
 import { TopBar } from "./TopBar";
 
 export function Shell({
@@ -23,6 +24,7 @@ export function Shell({
           stood at the end of the selected day, India time.
         </footer>
       </main>
+      <Copilot asOf={asOf} eventEnd={w.eventEndsAt.slice(0, 10)} />
     </>
   );
 }

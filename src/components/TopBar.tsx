@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { Sparkle } from "./Copilot";
 import { SpinnerIcon, TrendIcon } from "./icons";
 
-// Only screens that exist are listed; the copilot joins when it is built.
+// The copilot opens as a side panel from the button on the right.
 const NAV = [
   { href: "/", label: "Overview" },
   { href: "/campaigns", label: "Campaigns" },
@@ -57,6 +58,9 @@ export function TopBar({ asOf, min, max }: { asOf: string; min: string; max: str
               }}
             />
           </label>
+          <button type="button" className="btn small-40 cp-open" onClick={() => window.dispatchEvent(new Event("copilot:open"))}>
+            <Sparkle /> <span>Copilot</span>
+          </button>
           {pending && (
             <span className="updating" role="status">
               <SpinnerIcon color="#1D4ED8" /> Updating numbers…

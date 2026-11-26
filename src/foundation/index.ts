@@ -11,3 +11,4 @@ export * from "./history";
 export * from "./snapshot";
 export * from "./simulate";
 export * from "./plan";
+export * from "./copilot";

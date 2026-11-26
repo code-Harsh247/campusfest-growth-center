@@ -1,0 +1,124 @@
+/* The copilot side panel. Uses the tokens from globals.css. */
+.warn-text { color: var(--warn-fg); }
+.btn.ghost { background: transparent; color: var(--muted); }
+.btn.ghost:hover { background: var(--neutral-bg); }
+.link-btn { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 500; cursor: pointer; text-decoration: underline; }
+.cp-open svg { flex: none; }
+
+.cp-panel {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(440px, 100vw);
+  background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-pop);
+  display: flex; flex-direction: column; animation: cp-in 180ms ease-out;
+}
+@keyframes cp-in { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+.cp-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.cp-head h2 { margin: 0; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+.cp-head h2 svg { color: var(--accent); }
+.cp-icon-btn {
+  min-width: 40px; height: 40px; display: inline-grid; place-items: center; border: 0; border-radius: 8px;
+  background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; font-weight: 500;
+}
+.cp-icon-btn.text { padding: 0 10px; }
+.cp-icon-btn:hover { background: var(--neutral-bg); color: var(--text); }
+.cp-chips-static { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.cp-chips-static span { padding: 2px 8px; border-radius: 6px; background: var(--neutral-bg); color: var(--text-2); }
+.cp-chips-static span.info { background: var(--info-bg); color: var(--info-fg); }
+
+.cp-log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; overscroll-behavior: contain; }
+.cp-empty { color: var(--muted); font-size: 13px; padding: 8px 2px; }
+.cp-empty strong { color: var(--text); font-size: 14px; }
+.cp-empty p { margin: 4px 0 0; }
+.cp-user {
+  align-self: flex-end; max-width: 85%; padding: 10px 12px; border-radius: 12px 12px 4px 12px;
+  background: var(--accent); color: #fff; white-space: pre-wrap; overflow-wrap: anywhere; animation: gc-enter 160ms ease-out;
+}
+.cp-steps { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-2); }
+.cp-now { display: flex; align-items: center; gap: 8px; }
+.cp-steps ul { list-style: none; margin: 0; padding: 0 0 0 2px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+
+.cp-plain { font-size: 14px; color: var(--text); animation: gc-enter 160ms ease-out; }
+.cp-plain p { margin: 0 0 6px; }
+.cp-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; animation: gc-enter 160ms ease-out; }
+.cp-headline { margin: 0; padding: 12px 14px; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.cp-bullets { margin: 0; padding: 0 14px 12px 32px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-2); }
+.cp-other { padding: 0 14px 12px; font-size: 13px; color: var(--text-2); }
+.cp-other p { margin: 0 0 4px; }
+.cp-caret-row { padding: 0 14px 10px; }
+.cp-caret { display: inline-block; width: 2px; height: 16px; margin-left: 2px; vertical-align: -2px; background: var(--accent); animation: cp-blink 1s steps(2) infinite; }
+@keyframes cp-blink { 50% { opacity: 0; } }
+.cp-ej { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--divider); font-size: 12px; }
+.cp-ej > div { padding: 10px 14px; color: var(--text-2); }
+.cp-ej > div + div { border-left: 1px solid var(--divider); }
+.cp-receipt { border-top: 1px solid var(--divider); padding: 8px 14px; font-size: 12px; color: var(--muted); background: var(--page); }
+.cp-receipt summary { cursor: pointer; min-height: 24px; }
+.cp-receipt p { margin: 6px 0 0; }
+.cp-next {
+  border-top: 1px solid var(--divider); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; flex-wrap: wrap; font-size: 13px;
+}
+.cp-draft {
+  min-height: 36px; padding: 0 12px; border: 1px solid var(--control); border-radius: 8px; background: var(--info-bg);
+  color: var(--info-fg); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.cp-draft:disabled { opacity: 0.6; cursor: default; }
+.cp-card.cannot { background: var(--page); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text-2); }
+.cp-card.cannot p { margin: 0; }
+.cp-card.cannot .cp-next, .cp-card.cannot .cp-receipt { margin: 0 -14px; }
+.cp-card.cannot > :last-child.cp-next, .cp-card.cannot > :last-child.cp-receipt { margin-bottom: -12px; }
+.cp-badge {
+  align-self: flex-start; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 6px;
+  background: var(--neutral-bg); color: var(--text-2); border: 1px solid var(--border);
+}
+
+.cp-task {
+  border: 1px solid var(--control); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  background: var(--page); animation: gc-enter 160ms ease-out;
+}
+.cp-tag { font-size: 12px; padding: 1px 8px; border-radius: 6px; background: var(--neutral-bg); color: var(--text-2); }
+.cp-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cp-task .field { font-size: 12px; }
+.cp-dl { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; font-size: 13px; }
+.cp-dl .wide, .cp-dl > div:first-child { grid-column: 1 / -1; }
+.cp-dl dt { font-size: 12px; color: var(--muted); }
+.cp-dl dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+
+.cp-note { border: 1px solid var(--border); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.cp-note p { margin: 0; }
+.cp-note strong { display: inline-flex; align-items: center; gap: 6px; }
+.cp-note.bad { border-color: var(--bad-border); background: var(--bad-bg); }
+.cp-note.bad strong { color: var(--bad-fg); }
+.cp-note.bad p { color: #7a271a; }
+.cp-note.warn { border-color: var(--warn-border); background: var(--warn-bg); }
+.cp-note.warn strong { color: var(--warn-fg); }
+.cp-note.warn p { color: var(--warn-text); }
+.cp-note.good { border-color: #abefc6; background: var(--good-bg); }
+.cp-note.good strong { color: var(--good-fg); }
+.cp-note .btn { align-self: flex-start; }
+
+.cp-compose { border-top: 1px solid var(--border); padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
+.cp-suggest { display: flex; gap: 6px; flex-wrap: wrap; }
+.cp-suggest button {
+  min-height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  color: var(--text-2); font: inherit; font-size: 12px; cursor: pointer; text-align: left;
+}
+.cp-suggest button:hover:not(:disabled) { border-color: var(--control); background: var(--page); }
+.cp-suggest button:disabled { opacity: 0.55; cursor: default; }
+.cp-input { display: flex; gap: 8px; align-items: flex-end; }
+.cp-input textarea, .cp-off textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--control); border-radius: 10px; font: inherit; font-size: 14px; resize: none;
+}
+.cp-input textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.cp-send {
+  flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: var(--accent); color: #fff;
+  display: grid; place-items: center; cursor: pointer;
+}
+.cp-send:disabled { background: var(--neutral-bg); color: var(--placeholder); cursor: default; }
+.cp-send.stop { background: var(--text-2); }
+.cp-off { flex: 1; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+.cp-off p { margin: 0; font-size: 13px; color: var(--muted); }
+.cp-off textarea { margin-top: auto; background: var(--neutral-bg); color: var(--muted); }
+
+@media (max-width: 520px) {
+  .cp-panel { width: 100vw; border-left: 0; }
+  .cp-open span { display: none; }
+}
