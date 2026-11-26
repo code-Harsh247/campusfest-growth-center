@@ -42,6 +42,15 @@ export async function countLiveEdits(db: Db): Promise<number> {
   return r.n;
 }
 
+/** Assumptions that no longer hold their default; a reset puts them back. */
+export async function countChangedAssumptions(db: Db): Promise<number> {
+  const [r] = await db.query<{ n: number }>(
+    `select count(*)::int as n from app.assumptions
+     where default_value is not null and (value, tag, basis) is distinct from (default_value, default_tag, default_basis)`,
+  );
+  return r.n;
+}
+
 /** Whether the loaded dataset is something other than the supplied one (an upload). */
 export async function currentSource(db: Db): Promise<string | null> {
   const [r] = await db.query<{ source: string }>("select source from app.load_report limit 1");

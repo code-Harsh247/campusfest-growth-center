@@ -9,3 +9,5 @@ export * from "./tasks";
 export * from "./impact";
 export * from "./history";
 export * from "./snapshot";
+export * from "./simulate";
+export * from "./plan";

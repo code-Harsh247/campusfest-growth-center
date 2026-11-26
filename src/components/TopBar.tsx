@@ -5,10 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { SpinnerIcon, TrendIcon } from "./icons";
 
-// Only screens that exist are listed; Plan and the copilot join when they are built.
+// Only screens that exist are listed; the copilot joins when it is built.
 const NAV = [
   { href: "/", label: "Overview" },
   { href: "/campaigns", label: "Campaigns" },
+  { href: "/plan", label: "Plan" },
   { href: "/tasks", label: "Tasks" },
   { href: "/data", label: "Data" },
 ];
@@ -51,7 +52,7 @@ export function TopBar({ asOf, min, max }: { asOf: string; min: string; max: str
                 if (!v) return;
                 const params = new URLSearchParams(window.location.search);
                 params.set("asOf", v);
-                for (const k of ["toast", "error", "edit", "moved", "done"]) params.delete(k);
+                for (const k of ["toast", "error", "edit", "moved", "done", "at"]) params.delete(k);
                 startTransition(() => router.push(`${pathname}?${params.toString()}`));
               }}
             />

@@ -23,10 +23,10 @@ export function ResetDialog({
           onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
         >
           <h3 id="dlg-h">Reset to the original data?</h3>
-          <p>{summary} Tasks are kept unless you also choose to clear them.</p>
+          <p>{summary} Tasks and the budget plan are kept unless you also choose to clear them.</p>
           <form action={action} className="stack" style={{ gap: 12 }}>
             <input type="hidden" name="nav_asOf" value={asOf} />
-            <label className="check"><input type="checkbox" name="clear_tasks" />Also clear all tasks</label>
+            <label className="check"><input type="checkbox" name="clear_tasks" />Also clear all tasks and the saved budget plan</label>
             <div className="dialog-actions">
               <button type="button" className="btn secondary" ref={cancelRef} onClick={() => setOpen(false)}>Cancel</button>
               <button type="submit" className="btn danger">Reset data</button>

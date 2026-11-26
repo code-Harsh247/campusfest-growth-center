@@ -1,7 +1,7 @@
 import type { Db } from "./db";
 import {
-  getCampaignTable, getFunnel, getTargetStatus,
-  type CampaignRow, type Funnel, type TargetStatusRow,
+  getCampaignTable, getFlags, getFunnel, getProjection, getTargetStatus,
+  type CampaignRow, type FlagRow, type Funnel, type ProjectionRow, type TargetStatusRow,
 } from "./metrics";
 
 /**
@@ -15,6 +15,8 @@ export interface MetricSnapshot {
   funnel: Funnel;
   campaigns: CampaignRow[];
   targets: TargetStatusRow[];
+  flags: Pick<FlagRow, "campaign_id" | "campaign_name" | "flag">[];
+  projection: ProjectionRow[];
 }
 
 export async function snapshotMetrics(db: Db, asOf: string): Promise<MetricSnapshot> {
@@ -23,6 +25,8 @@ export async function snapshotMetrics(db: Db, asOf: string): Promise<MetricSnaps
     funnel: (await getFunnel(db, asOf)).data,
     campaigns: (await getCampaignTable(db, asOf)).data,
     targets: (await getTargetStatus(db, asOf)).data,
+    flags: (await getFlags(db, asOf)).data.map(({ campaign_id, campaign_name, flag }) => ({ campaign_id, campaign_name, flag })),
+    projection: (await getProjection(db, asOf)).data,
   };
 }
 
@@ -43,7 +47,7 @@ const TARGET_LABEL: Record<TargetStatusRow["target"], string> = {
   marketing_budget: "Marketing spend",
 };
 
-/** At most `limit` lines, campaigns first, then totals, then targets. */
+/** At most `limit` lines: campaigns, totals, flags, the projection, then targets. */
 export function describeImpact(before: MetricSnapshot, after: MetricSnapshot, limit = 6): string[] {
   const lines: string[] = [];
 
@@ -74,6 +78,21 @@ export function describeImpact(before: MetricSnapshot, after: MetricSnapshot, li
   }
   if (totals.length) lines.push(`All campaigns: ${totals.join("; ")}`);
 
+  const flagMoves = after.flags.flatMap((fa) => {
+    const fb = before.flags.find((f) => f.campaign_id === fa.campaign_id);
+    return fb && fb.flag !== fa.flag ? [`${fa.campaign_name} ${fb.flag} → ${fa.flag}`] : [];
+  });
+  if (flagMoves.length) lines.push(`Flags: ${flagMoves.join("; ")}`);
+
+  const mid = (p: ProjectionRow[]) => p.find((r) => r.scenario === "middle");
+  const pb = mid(before.projection), pa = mid(after.projection);
+  if (pa && pb && pa.mode === "projection" && pb.mode === "projection") {
+    const parts: string[] = [];
+    if (!same(pa.registrations, pb.registrations, 0.5)) parts.push(`registrations ${int(pb.registrations)} → ${int(pa.registrations)}`);
+    if (!same(pa.attendees, pb.attendees, 0.5)) parts.push(`attendees ${int(pb.attendees)} → ${int(pa.attendees)}`);
+    if (parts.length) lines.push(`Projection (middle): ${parts.join("; ")}`);
+  }
+
   for (const ta of after.targets) {
     const tb = before.targets.find((t) => t.target === ta.target);
     if (!tb) continue;
@@ -84,6 +103,8 @@ export function describeImpact(before: MetricSnapshot, after: MetricSnapshot, li
     if (!same(ta.attainment, tb.attainment, 0.0005)) {
       const status = ta.status !== tb.status && ta.status ? ` (now ${ta.status})` : "";
       lines.push(`${TARGET_LABEL[ta.target]} attainment ${pct(tb.attainment)} → ${pct(ta.attainment)}${status}`);
+    } else if (ta.status !== tb.status && ta.status && tb.status) {
+      lines.push(`${TARGET_LABEL[ta.target]} ${tb.status} → ${ta.status}`);
     }
   }
   if (!before.targets.length && after.targets.length) lines.push(`Targets now in force: ${after.targets[0].target_version}`);

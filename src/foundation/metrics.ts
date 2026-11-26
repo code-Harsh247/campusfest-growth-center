@@ -221,21 +221,42 @@ export interface FlagRow {
   reason: string;
 }
 
-const pct = (x: number) => `${x >= 0 ? "+" : ""}${Math.round(x * 100)}%`;
+const pct = (x: number) => {
+  const v = Math.round(x * 100);
+  return `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)}%`;
+};
+
+export interface FlagRule {
+  band: number;
+  minDays: number;
+  minConfirmed: number;
+}
+
+/** The flag thresholds in force: editable assumptions, read fresh each time. */
+export async function getFlagRule(db: Db): Promise<FlagRule> {
+  const [r] = await db.query<FlagRule>(
+    `select metrics.anum('flag_band') as "band", metrics.anum('flag_min_days') as "minDays",
+            metrics.anum('flag_min_confirmed') as "minConfirmed"`,
+  );
+  return r;
+}
 
 export async function getFlags(db: Db, asOf: string): Promise<Result<FlagRow[]>> {
   const w = await checkAsOf(db, asOf);
   const rows = await db.query<Omit<FlagRow, "reason">>("select * from metrics.flags($1)", [asOf]);
+  const rule = await getFlagRule(db);
+  const band = `${Math.round(rule.band * 100)}%`;
   const data: FlagRow[] = rows.map((r) => {
     let reason: string;
     if (r.flag === "insufficient data" || r.per_1000 == null || r.benchmark == null || r.ratio == null) {
-      reason = "Not enough data yet: under 14 days of activity and fewer than 50 confirmed registrations, or no spend.";
+      reason = `Not enough data yet: under ${rule.minDays} days of activity and fewer than ${rule.minConfirmed} confirmed registrations, or no spend.`;
     } else {
       reason =
         `${r.per_1000.toFixed(1)} attendees per ₹1,000 against a median of ${r.benchmark.toFixed(1)} ` +
         `(${pct(r.ratio - 1)}).`;
-      if (r.flag === "stop") reason += " More than 25% below the median for two weekly reads in a row.";
-      if (r.flag === "change" && r.ratio < 0.75) reason += " Below the stop line once; stop if the next weekly read agrees.";
+      if (r.flag === "stop") reason += ` More than ${band} below the median for two weekly reads in a row.`;
+      if (r.flag === "change" && r.ratio < 1 - rule.band) reason += " Below the stop line once; stop if the next weekly read agrees.";
+      else if (r.flag === "change") reason += ` Inside the ±${band} band.`;
     }
     return { ...r, reason };
   });

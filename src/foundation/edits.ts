@@ -198,6 +198,51 @@ export async function deleteRecord(
   });
 }
 
+type LogEntry = { record_id: string; before: Row | null; after: Row | null };
+
+/** Same keys and values; jsonb does not keep key order, so compare key by key. */
+const sameObject = (a: Row | null, b: Row | null) => {
+  const ka = Object.keys(a ?? {}).sort(), kb = Object.keys(b ?? {}).sort();
+  return JSON.stringify(ka) === JSON.stringify(kb) && ka.every((k) => String(a![k]) === String(b![k]));
+};
+
+/**
+ * Undo for the app's own settings that change numbers: assumptions and the saved
+ * budget plan. Same rule as the data: only if nothing has changed it since.
+ */
+const APP_UNDO: Record<string, (tx: Db, e: LogEntry) => Promise<{ before: Row | null; after: Row | null }>> = {
+  "app.assumptions": async (tx, e) => {
+    const [current] = await tx.query<Row>("select value, tag, basis from app.assumptions where key = $1", [e.record_id]);
+    if (!current) throw new EditError(`Assumption ${e.record_id} no longer exists`);
+    if (!sameObject(current, e.after)) {
+      throw new EditError(`${e.record_id} has changed since; undo the later change first`);
+    }
+    const b = e.before as { value: string; tag: string; basis: string };
+    await tx.query(
+      "update app.assumptions set value = $2, tag = $3, basis = $4, updated_at = now(), updated_by = 'undo' where key = $1",
+      [e.record_id, b.value, b.tag, b.basis],
+    );
+    // Back to the seeded value counts as never changed.
+    await tx.query("update app.assumptions set updated_by = 'seed' where key = $1 and value = default_value and tag = default_tag and basis = default_basis", [e.record_id]);
+    return { before: current, after: e.before };
+  },
+  "app.planned_budgets": async (tx, e) => {
+    const rows = await tx.query<{ campaign_id: string; planned_inr: number; as_of: string; set_by: string }>(
+      "select campaign_id, planned_inr, as_of::text as as_of, set_by from app.planned_budgets order by campaign_id",
+    );
+    const current = Object.fromEntries(rows.map((r) => [r.campaign_id, r.planned_inr]));
+    if (!sameObject(current, e.after)) throw new EditError("The plan has changed since; undo the later save first");
+    await tx.exec("delete from app.planned_budgets;");
+    for (const [id, v] of Object.entries(e.before ?? {})) {
+      await tx.query(
+        "insert into app.planned_budgets (campaign_id, planned_inr, set_by, as_of) values ($1, $2, 'undo', $3)",
+        [id, v, rows[0]?.as_of ?? "1900-01-01"],
+      );
+    }
+    return { before: current, after: e.before };
+  },
+};
+
 /** Reverses one edit, provided nothing has changed the record since. */
 export async function undoEdit(db: Db, editId: number, actor: string): Promise<EditResult> {
   return db.transaction(async (tx) => {
@@ -208,6 +253,14 @@ export async function undoEdit(db: Db, editId: number, actor: string): Promise<E
     if (entry.undone_by) throw new EditError(`Edit ${editId} was already undone`);
     if (!["insert", "update", "delete"].includes(entry.action)) {
       throw new EditError(`A ${entry.action} cannot be undone; reset or reload instead`);
+    }
+    if (entry.table_name in APP_UNDO) {
+      const { before, after } = await APP_UNDO[entry.table_name](tx, entry);
+      const undoId = await log(tx, {
+        actor, action: "undo", table: entry.table_name, id: entry.record_id, before, after, note: `Undo of edit ${editId}`,
+      });
+      await tx.query("update app.edit_log set undone_by = $1 where edit_id = $2", [undoId, editId]);
+      return { editId: undoId, before, after };
     }
     const spec = specFor(entry.table_name);
     const current = await fetchRow(tx, spec, entry.record_id);

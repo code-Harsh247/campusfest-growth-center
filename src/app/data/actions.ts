@@ -193,6 +193,6 @@ export async function resetAction(form: FormData) {
   const clearTasks = form.get("clear_tasks") === "on";
   await loadDataset(await getDb(), suppliedDataset(), ACTOR, { reset: true, clearTasks });
   revalidatePath("/", "layout");
-  const params = new URLSearchParams({ asOf: str(form, "nav_asOf"), toast: `Data reset to the original CampusFest 2025 dataset${clearTasks ? "; tasks cleared" : ""}` });
+  const params = new URLSearchParams({ asOf: str(form, "nav_asOf"), toast: `Data reset to the original CampusFest 2025 dataset${clearTasks ? "; tasks and plan cleared" : ""}` });
   redirect(`/data?${params.toString()}`);
 }

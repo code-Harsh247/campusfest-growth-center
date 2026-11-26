@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  TABLE_BY_NAME, countLiveEdits, currentSource, dataWindow, getDataQuality, listEdits, listTeam,
+  TABLE_BY_NAME, countChangedAssumptions, countLiveEdits, currentSource, dataWindow, getDataQuality, listEdits, listTeam,
   type DataWindow, type Db, type EditEntry,
 } from "@/foundation";
 import { AutoSubmitForm } from "@/components/AutoSubmitForm";
@@ -38,13 +38,15 @@ export default async function DataPage({ searchParams }: { searchParams: Promise
   const { asOf, notice } = resolveAsOf(sp.asOf, w);
   const tab: Tab = TABS.some((t) => t.id === sp.tab) ? (sp.tab as Tab) : "daily";
 
-  const [edits, quality, liveEdits, source] = [
+  const [edits, quality, liveEdits, source, changedAssumptions] = [
     await listEdits(db, 40), (await getDataQuality(db)).data, await countLiveEdits(db), await currentSource(db),
+    await countChangedAssumptions(db),
   ];
   const uploaded = source !== null && source !== SUPPLIED_SOURCE;
   const undoParts = [
     liveEdits ? `removes ${liveEdits} edit${liveEdits === 1 ? "" : "s"}` : "",
     uploaded ? `replaces the uploaded dataset (${source})` : "",
+    changedAssumptions ? `puts ${changedAssumptions} changed assumption${changedAssumptions === 1 ? "" : "s"} back to default` : "",
   ].filter(Boolean);
   const resetSummary = undoParts.length
     ? `This ${undoParts.join(", ")} and returns every number to the original CampusFest 2025 data.`
@@ -424,6 +426,8 @@ function recordLabel(e: EditEntry): string {
     case "registration_history": return `Registration ${r.registration_id} · ${r.person_name ?? r.person_id}`;
     case "checkins": return `Admission ${r.event_id} · ${r.person_name ?? r.person_id}`;
     case "app.tasks": return `Task #${e.record_id}`;
+    case "app.assumptions": return `Assumption · ${e.record_id?.replace(/_/g, " ")}`;
+    case "app.planned_budgets": return "Budget plan";
     case "people": return `Person ${e.record_id}`;
     default: return e.table_name ? `${TABLE_BY_NAME.get(e.table_name)?.sheet ?? e.table_name} ${e.record_id ?? ""}` : e.note ?? "";
   }
@@ -436,6 +440,7 @@ function changeText(e: EditEntry): string {
     return "Added";
   }
   if (e.action === "delete") return e.note ?? "Removed";
+  if (e.table_name === "app.planned_budgets") return e.action === "undo" ? `${e.note}: earlier plan restored` : e.note ?? "Plan saved";
   const b = (e.before ?? {}) as Record<string, unknown>, a = (e.after ?? {}) as Record<string, unknown>;
   const keys = Object.keys({ ...b, ...a }).filter((k) => JSON.stringify(b[k]) !== JSON.stringify(a[k]) && !["updated_at"].includes(k));
   const parts = keys.slice(0, 3).map((k) => `${FIELD_LABEL[k] ?? k.replace(/_/g, " ")} ${show(k, b[k])} → ${show(k, a[k])}`);
@@ -460,7 +465,8 @@ function EditLog({ edits, asOf, tab }: { edits: EditEntry[]; asOf: string; tab: 
           </thead>
           <tbody>
             {edits.map((e) => {
-              const undoable = ["insert", "update", "delete"].includes(e.action) && !e.table_name?.startsWith("app.") && !e.undone_by;
+              const undoable = ["insert", "update", "delete"].includes(e.action) && !e.undone_by &&
+                (!e.table_name?.startsWith("app.") || e.table_name === "app.assumptions" || e.table_name === "app.planned_budgets");
               return (
                 <tr key={e.edit_id} className={e.undone_by ? "subtle" : undefined}>
                   <td className="t-left">{e.actor === "system" ? "System" : e.actor}</td>

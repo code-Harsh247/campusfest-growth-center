@@ -54,7 +54,7 @@ export interface TaskInput {
   due_date?: string | null;
   status?: string;
   priority?: string;
-  source?: "manual" | "flag" | "chatbot" | "seed";
+  source?: "manual" | "flag" | "chatbot" | "seed" | "plan";
   metric_snapshot?: unknown;
 }
 

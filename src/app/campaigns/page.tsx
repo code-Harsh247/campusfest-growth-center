@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { dataWindow, getCampaignTable, getFlags, listTasks, type DataWindow, type Db, type FlagRow } from "@/foundation";
+import { dataWindow, getCampaignTable, getFlagRule, getFlags, listTasks, type DataWindow, type Db, type FlagRow } from "@/foundation";
 import { InfoIcon, WarningIcon } from "@/components/icons";
 import { Pill, Shell, toneFor } from "@/components/Shell";
 import { CampaignsSkeleton } from "@/components/Skeletons";
@@ -32,6 +32,8 @@ async function Campaigns({ db, asOf, w }: { db: Db; asOf: string; w: DataWindow 
   const table = await getCampaignTable(db, asOf);
   const flags = await getFlags(db, asOf);
   const tasks = await listTasks(db, asOf);
+  const rule = await getFlagRule(db);
+  const band = `${Math.round(rule.band * 100)}%`;
   const preEvent = asOf < w.eventEndsAt.slice(0, 10);
 
   const flagBy = new Map(flags.data.map((r) => [r.campaign_id, r]));
@@ -189,7 +191,7 @@ async function Campaigns({ db, asOf, w }: { db: Db; asOf: string; w: DataWindow 
 
       <section aria-label="Notes on this table" className="grid-auto-280 notes">
         <div className="note"><strong>Averages</strong>Costs are averages, not the cost of the next person.</div>
-        <div className="note"><strong>Flag rule</strong>Scale at 25% or more above the median; stop at more than 25% below for two weekly reads in a row; change otherwise. Under 14 days or 50 confirmed shows “insufficient data”.</div>
+        <div className="note"><strong>Flag rule</strong>Scale at {band} or more above the median; stop at more than {band} below for two weekly reads in a row; change otherwise. Under {rule.minDays} days of data and under {rule.minConfirmed} confirmed shows “insufficient data”. <Link href={`/plan?asOf=${asOf}#assumptions`} className="link">Change the rule</Link></div>
         <div className="note"><strong>Unattributed</strong>Unattributed holds walk-ins. They count toward verified attendees, not toward any campaign.</div>
       </section>
     </div>

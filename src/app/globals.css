@@ -182,6 +182,8 @@ details.defn p { margin: 6px 0 0; }
 .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden; }
 .table-scroll { overflow-x: auto; }
 .mini-table { overflow-x: auto; border: 1px solid var(--divider); border-radius: var(--radius-control); }
+/* Scroll boxes contain their absolutely placed children (screen-reader-only headers), so those cannot widen the page. */
+.mini-table, .table-scroll { position: relative; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead tr { background: var(--page); color: var(--muted); }
 th, td { padding: 12px 10px; text-align: right; vertical-align: top; }
@@ -358,3 +360,59 @@ tr.selected td { background: var(--accent-soft); }
 }
 .dropzone:hover, .dropzone.over { border-color: var(--bar); background: var(--accent-soft); }
 .dropzone:focus-within { outline: 2px solid var(--bar); outline-offset: 2px; }
+
+/* ------------------------------------------------------------ plan */
+.strong { font-weight: 600; }
+.nowrap { white-space: nowrap; }
+.body-2 { color: var(--text-2); }
+.good-text { color: var(--good-fg); }
+.bad-text { color: var(--bad-fg); }
+.row-wrap { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn.small-40 { min-height: 40px; padding: 0 12px; flex: none; }
+.btn.small-36 { min-height: 36px; padding: 0 12px; }
+.check.accent input { accent-color: var(--accent); }
+
+.flag-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.flag-list li {
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--divider);
+}
+.flag-pill { flex: none; width: 92px; }
+.flag-name { color: var(--text); font-weight: 600; text-decoration: none; }
+.flag-name:hover { text-decoration: underline; }
+
+.chip-s {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 6px;
+  background: var(--neutral-bg); color: var(--text-2); font-size: 12px; font-weight: 500;
+}
+.chip-s abbr { text-decoration: none; font-weight: 700; }
+
+.sim-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 20px; align-items: start;
+}
+.sim-table { min-width: 540px; }
+.sim-table thead tr { background: transparent; }
+.sim-table thead th { padding: 8px; }
+.sim-table tbody tr { border-top: 1px solid var(--divider); }
+.sim-table tbody th { font-weight: 500; }
+.sim-table td, .sim-table th { padding: 10px 8px; vertical-align: middle; }
+.sim-table tfoot tr { border-top: 2px solid var(--border); font-weight: 600; }
+.sim-control { display: flex; align-items: center; gap: 10px; }
+.sim-control input[type="range"] { flex: 1; min-width: 80px; height: 24px; accent-color: var(--accent); margin: 0; }
+.sim-amount {
+  width: 96px; min-height: 36px; padding: 0 8px; border: 1px solid var(--control); border-radius: var(--radius-control);
+  font: inherit; font-weight: 600; text-align: right; background: var(--surface); color: var(--text);
+}
+.sim-amount:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.sim-result { padding: 16px; border-radius: 10px; background: var(--page); border: 1px solid var(--border); }
+.sim-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sim-big strong { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; transition: color 160ms ease; }
+.sim-big span { color: var(--text-2); }
+
+tr.editing { background: var(--accent-soft); }
+.edit-panel {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 14px;
+  border: 1px solid var(--control); border-radius: 10px; background: var(--page);
+}
+.edit-panel-head { width: 100%; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.edit-panel .field { font-size: 12px; }
+.grow { flex-grow: 1; }

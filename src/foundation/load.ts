@@ -140,7 +140,8 @@ async function insertRows(db: Db, schema: string, spec: TableSpec, rows: Row[]):
 
 /**
  * Replaces the original and working copies with a parsed dataset, records what
- * the loader removed, and logs the load. Tasks and assumptions are untouched.
+ * the loader removed, and logs the load. Tasks are kept unless `clearTasks`;
+ * a reset also puts changed assumptions back to their defaults.
  */
 export async function loadDataset(
   db: Db,
@@ -149,7 +150,16 @@ export async function loadDataset(
   opts: { reset?: boolean; clearTasks?: boolean } = {},
 ): Promise<void> {
   await db.transaction(async (tx) => {
-    if (opts.clearTasks) await tx.exec("delete from app.tasks;");
+    if (opts.clearTasks) await tx.exec("delete from app.tasks; delete from app.planned_budgets;");
+    // A reset returns every number to the original, so changed assumptions go back too.
+    const restored = opts.reset
+      ? await tx.query(
+        `update app.assumptions set value = default_value, tag = default_tag, basis = default_basis,
+                updated_at = now(), updated_by = 'seed'
+         where default_value is not null
+           and (value, tag, basis) is distinct from (default_value, default_tag, default_basis)
+         returning key`)
+      : [];
     for (const spec of TABLES) {
       await tx.exec(`truncate original.${spec.table}; truncate working.${spec.table};`);
       await insertRows(tx, "original", spec, data.tables.get(spec.table) ?? []);
@@ -175,7 +185,8 @@ export async function loadDataset(
         actor,
         opts.reset ? "reset" : "load",
         opts.reset
-          ? `Reset to ${data.source}${opts.clearTasks ? "; tasks cleared" : "; tasks kept"}`
+          ? `Reset to ${data.source}${opts.clearTasks ? "; tasks and plan cleared" : "; tasks kept"}` +
+            (restored.length ? `; ${restored.length} assumption${restored.length === 1 ? "" : "s"} back to default` : "")
           : `Loaded ${data.source}`,
         JSON.stringify(data.report),
       ],

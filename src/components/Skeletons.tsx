@@ -80,3 +80,22 @@ export function TasksSkeleton() {
     </div>
   );
 }
+
+export function PlanSkeleton() {
+  return (
+    <div className="stack" style={{ gap: 24 }} aria-busy="true" aria-label="Loading numbers">
+      <Head title="Where should the money go?" />
+      <div className="card" aria-hidden="true">
+        <Bar w="20%" h={16} />
+        {[1, 2, 3, 4, 5, 6, 7].map((k) => <Bar key={k} h={40} r={8} />)}
+      </div>
+      <div className="card" aria-hidden="true">
+        <Bar w="30%" h={16} />
+        <div className="sim-grid">
+          <div className="stack">{[1, 2, 3, 4, 5, 6, 7].map((k) => <Bar key={k} h={32} r={8} />)}</div>
+          <div className="stack"><Bar h={104} r={10} /><Bar h={104} r={10} /></div>
+        </div>
+      </div>
+    </div>
+  );
+}

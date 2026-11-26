@@ -87,3 +87,26 @@ create table if not exists app.tasks (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+
+-- Defaults let a reset put changed assumptions back. On a database made before
+-- these columns existed, the current values are still the seeded ones.
+alter table app.assumptions add column if not exists default_value text;
+alter table app.assumptions add column if not exists default_tag text;
+alter table app.assumptions add column if not exists default_basis text;
+update app.assumptions set default_value = value, default_tag = tag, default_basis = basis
+where default_value is null;
+
+-- Tasks can also come from a saved budget plan.
+alter table app.tasks drop constraint if exists tasks_source_check;
+alter table app.tasks add constraint tasks_source_check
+  check (source in ('manual', 'flag', 'chatbot', 'seed', 'plan'));
+
+-- The saved budget plan: one planned amount per campaign. Not in the dataset,
+-- so it is labelled simulated wherever it is shown.
+create table if not exists app.planned_budgets (
+  campaign_id text primary key,
+  planned_inr integer not null check (planned_inr >= 0),
+  set_at      timestamptz not null default now(),
+  set_by      text not null,
+  as_of       date not null              -- the selected date the plan was made on
+);
