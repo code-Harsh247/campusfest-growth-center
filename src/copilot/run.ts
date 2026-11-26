@@ -147,7 +147,8 @@ export async function runCopilot(a: RunArgs, emit: (e: CopilotEvent) => void): P
       answer = "Can't answer: this request was declined by the model's safety checks.\nNext: Ask about the campaign data instead.";
       emit({ type: "text", delta: answer });
     }
-    const ungrounded = ungroundedNumbers(answer, ctx.results);
+    // Numbers the person wrote in the question ("for 3,200?") count as given.
+    const ungrounded = ungroundedNumbers(answer, [...ctx.results, JSON.stringify(a.question)]);
     emit({ type: "done", answer, receipt: summariseReceipts(ctx.receipts, ctx.calls.map((c) => c.name)), ungrounded, stopReason });
     await log(a, ctx, { answer, stopReason, ungrounded, error, started, usage });
   } catch (err) {

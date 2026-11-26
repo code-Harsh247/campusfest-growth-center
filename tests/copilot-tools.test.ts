@@ -23,7 +23,7 @@ const r1 = (x: unknown) => Math.round((x as number) * 1000) / 10; // a ratio as 
 
 describe("PRD sample questions, answered by the tools (20 Apr 2025 unless stated)", () => {
   it("lowest and highest cost per verified attendee", async () => {
-    const { data } = await call("compare_campaigns", { as_of: null, group_by: null });
+    const { data: { campaigns: data } } = await call("compare_campaigns", { as_of: null, group_by: null });
     const ranked = (data as Row[]).filter((r) => r.campaign_id && r.cost_per_attendee != null)
       .sort((a, b) => (a.cost_per_attendee as number) - (b.cost_per_attendee as number));
     expect([ranked[0].campaign, r0(ranked[0].cost_per_attendee)]).toEqual(["Student Referrals", 69]);
@@ -31,7 +31,8 @@ describe("PRD sample questions, answered by the tools (20 Apr 2025 unless stated
   });
 
   it("Paid Social: both show-rate readings, spend, attendees, cancellations", async () => {
-    const { data } = await call("compare_campaigns", { as_of: null, group_by: null });
+    const { data: { campaigns: data, totals } } = await call("compare_campaigns", { as_of: null, group_by: null });
+    expect([totals.spend, totals.cancelled]).toEqual([274000, 183]);
     const ps = byName(data, "Paid Social");
     expect([r1(ps.show_rate), r1(ps.attendance_yield), ps.spend, ps.attendees, r0(ps.cost_per_attendee)]).toEqual([58.6, 50, 93000, 340, 274]);
     const mostCancelled = (data as Row[]).sort((a, b) => (b.cancelled as number) - (a.cancelled as number))[0];
@@ -40,9 +41,10 @@ describe("PRD sample questions, answered by the tools (20 Apr 2025 unless stated
   });
 
   it("whose campaigns spent the most (grouped by owner)", async () => {
-    const { data } = await call("compare_campaigns", { as_of: null, group_by: "owner" });
+    const { data: { owners: data, totals, shares } } = await call("compare_campaigns", { as_of: null, group_by: "owner" });
     expect([data[0].owner_name, data[0].spend]).toEqual(["Arjun Verma", 107000]);
     expect(data[0].campaigns.sort()).toEqual(["Organic Search", "Paid Social"]);
+    expect([totals.spend, Math.round(shares[0].share_of_spend * 1000) / 10]).toEqual([274000, 39.1]);
   });
 
   it("the week with the most registrations", async () => {
@@ -81,7 +83,8 @@ describe("the 15 Mar demo thread", () => {
     const t = await call("get_targets", { as_of: null }, ctx);
     const regs = (t.data as Row[]).find((x) => x.target === "registrations")!;
     expect([regs.actual, regs.goal, r1(regs.attainment), regs.status]).toEqual([1562, 3200, 48.8, "behind"]);
-    const { data } = await call("compare_campaigns", { as_of: null, group_by: null }, ctx);
+    const { data: { campaigns: data, totals } } = await call("compare_campaigns", { as_of: null, group_by: null }, ctx);
+    expect([totals.spend, totals.registered, r0(totals.cost_per_registration)]).toEqual([189575, 1562, 121]);
     expect(r0(byName(data, "Creator Partners").cost_per_registration)).toBe(237);
     expect(r0(byName(data, "Organic Search").cost_per_registration)).toBe(58);
     expect(r0(byName(data, "Paid Social").cost_per_registration)).toBe(122);
@@ -110,9 +113,34 @@ describe("guardrails", () => {
   });
 });
 
+describe("arithmetic comes from tools (first eval's real failures)", () => {
+  it("get_targets returns budget left and what is still needed", async () => {
+    const { data } = await call("get_targets", { as_of: null });
+    expect((data as Row[]).find((t) => t.target === "marketing_budget")!.budget_left).toBe(26000);
+  });
+
+  it("calculate does shares and refuses anything but arithmetic", async () => {
+    const r = await call("calculate", { expression: "(725 / 2,050) * 100", what: "share who came both days, %" });
+    expect(r.data.rounded_1dp).toBe(35.4);
+    await expect(call("calculate", { expression: "process.exit(1)", what: "x" })).rejects.toThrow(/only numbers/);
+    await expect(call("calculate", { expression: "1/0", what: "x" })).rejects.toThrow(/finite/);
+  });
+
+  it("a task card whose reason has a number no tool returned is sent back", async () => {
+    const ctx = ctxFor();
+    await call("compare_campaigns", { as_of: null, group_by: null }, ctx);
+    const base = { title: "Pause Paid Social", campaign_id: "Paid Social", owner: null, due_date: null, priority: null, metric_name: null, metric_value: null };
+    await expect(call("propose_task", { ...base, reason: "Cost per attendee is ₹4,12,345 (20 Apr 2025)" }, ctx)).rejects.toThrow(/4,12,345/);
+    const ok = await call("propose_task", { ...base, reason: "₹93,000 for 340 attendees, ₹274 each (20 Apr 2025)" }, ctx);
+    expect(ok.data.owner).toBe("Arjun Verma");
+    await decideAction(db, ok.data.proposal_id, { accept: false }, "test");
+  });
+});
+
 describe("from proposal to task", () => {
   it("propose_task saves a proposal, never a task; only the click creates one", async () => {
     const ctx = ctxFor("2025-03-15");
+    await call("compare_campaigns", { as_of: null, group_by: null }, ctx); // the numbers the reason cites
     const before = (await listTasks(db, FINAL)).length;
     const r = await call("propose_task", {
       title: "Move Creator Partners to pay per verified attendee", campaign_id: "Creator Partners", owner: null, due_date: null,
@@ -128,7 +156,9 @@ describe("from proposal to task", () => {
     expect([task!.source, task!.owner_name, task!.due_date, item.status, item.task_id]).toEqual(["chatbot", "Nisha Rao", "2025-03-22", "accepted", task!.task_id]);
     await expect(decideAction(db, r.data.proposal_id, { accept: false }, "test")).rejects.toThrow(/already accepted/);
 
-    const r2 = await call("propose_task", { title: "Pause Paid Social", campaign_id: "C06", owner: null, due_date: null, priority: null, reason: "₹274 per attendee", metric_name: null, metric_value: null });
+    const ctx2 = ctxFor();
+    await call("compare_campaigns", { as_of: null, group_by: null }, ctx2);
+    const r2 = await call("propose_task", { title: "Pause Paid Social", campaign_id: "Paid Social", owner: null, due_date: null, priority: null, reason: "₹274 per attendee", metric_name: null, metric_value: null }, ctx2);
     const d = await decideAction(db, r2.data.proposal_id, { accept: false, reason: "Not now" }, "test");
     expect([d.task, d.item.status, d.item.dismiss_reason]).toEqual([null, "dismissed", "Not now"]);
     expect((await listActionItems(db, "proposed")).length).toBe(0);

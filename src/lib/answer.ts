@@ -29,7 +29,7 @@ export function parseAnswer(text: string): ParsedAnswer {
   const out: ParsedAnswer = { kind: "plain", headline: "", bullets: [], measured: null, judgement: null, closest: null, needed: null, next: null, other: [] };
   for (const raw of lines) {
     const line = raw.replace(/\*\*/g, "");
-    const cannot = line.match(/^can'?t answer:\s*/i) ?? line.match(/^cannot answer:\s*/i);
+    const cannot = line.match(/^(?:can['’]?t|cannot) answer:\s*/i) ?? line.match(/^(?=the data (?:can['’]?t|cannot|does not|doesn['’]?t) (?:tell|answer|show))/i);
     if (!out.headline && cannot) { out.kind = "cannot"; out.headline = line.slice(cannot[0].length); continue; }
     const field = PREFIX.find(([re]) => re.test(line));
     if (field) {

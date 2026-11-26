@@ -74,7 +74,11 @@ export function demoReply(body: Record<string, unknown>): Reply {
     return { blocks: [{ type: "text", text: "Can't answer: the data has entry scans but no exit scans and no venue limit.\nNeeded: The venue's capacity and exit counts.\nNext: Shall I draft a task to get the venue's limit?" }] };
   }
   if (/draft|yes/.test(q)) {
-    if (!afterTools) return { blocks: [{ type: "tool_use", name: "propose_task", input: { title: "Move Paid Social to retargeting only", campaign_id: "C02", owner: null, due_date: null, priority: "high", reason: "Paid Social: ₹93,000 for 340 verified attendees (₹274 each) against a median of 10.3 attendees per ₹1,000, as of 20 Apr 2025", metric_name: "cost_per_attendee", metric_value: 274 } }] };
+    // Fetch the numbers first: a card's reason may only cite figures a tool returned this turn.
+    const msgs = (body.messages as { role: string; content: unknown }[]) ?? [];
+    const proposed = msgs.some((m) => m.role === "assistant" && Array.isArray(m.content) && m.content.some((c: { type: string; name?: string }) => c.type === "tool_use" && c.name === "propose_task"));
+    if (!afterTools) return { blocks: [{ type: "tool_use", name: "compare_campaigns", input: { as_of: null, group_by: null } }, { type: "tool_use", name: "get_flags", input: { as_of: null } }] };
+    if (!proposed) return { blocks: [{ type: "tool_use", name: "propose_task", input: { title: "Move Paid Social to retargeting only", campaign_id: "C02", owner: null, due_date: null, priority: "high", reason: "Paid Social: ₹93,000 for 340 verified attendees (₹274 each) against a median of 10.3 attendees per ₹1,000, as of 20 Apr 2025", metric_name: "cost_per_attendee", metric_value: 274 } }] };
     return { blocks: [{ type: "text", text: "The task card is waiting for your confirmation: move Paid Social to retargeting only, for Arjun Verma, due 27 Apr 2025." }] };
   }
   if (!afterTools) return { blocks: [{ type: "tool_use", name: "compare_campaigns", input: { as_of: null, group_by: null } }, { type: "tool_use", name: "get_flags", input: { as_of: null } }] };

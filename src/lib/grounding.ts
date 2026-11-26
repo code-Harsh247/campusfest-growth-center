@@ -9,6 +9,10 @@ const MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec";
 /** Numbers as written in the answer, with dates, years and small counts left out. */
 export function numbersIn(answer: string): { text: string; value: number; decimals: number; percent: boolean }[] {
   const cleaned = answer
+    // "12 and 13 Apr", "24 Mar to 30 Mar": the first day of a range written out in words
+    .replace(new RegExp(`\\b\\d{1,2}(?:\\s+(?:${MONTHS})[a-z]*)?\\s+(?:and|to|&)\\s+(?=\\d{1,2}\\s+(?:${MONTHS}))`, "gi"), " ")
+    // settings named by length, such as "28-day run rate" or "a 14-day window"
+    .replace(/\b\d+-(?:day|week|month)s?\b/gi, " ")
     .replace(new RegExp(`\\b\\d{1,2}\\s*(?:[–-]\\s*\\d{1,2}\\s*)?(?:${MONTHS})[a-z]*\\.?(?:\\s+\\d{4})?`, "gi"), " ") // 20 Apr 2025, 24–30 Mar
     .replace(new RegExp(`\\b(?:${MONTHS})[a-z]*\\.?\\s+\\d{1,2}(?:,?\\s+\\d{4})?`, "gi"), " ")
     .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")

@@ -1,6 +1,7 @@
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { ToolError } from "@anthropic-ai/sdk/lib/tools/ToolError";
 import { z } from "zod";
+import { ungroundedNumbers } from "@/lib/grounding";
 import {
   AsOfError, EditError, METRICS, QueryRefused, UNANSWERABLE, byOwner, checkAsOf, getCampaignTable, getDataQuality,
   getFlagRule, getFlags, getFunnel, getProjection, getSimulatorInputs, getTargetStatus, getWeekly, listActionItems, listTasks,
@@ -99,7 +100,14 @@ export function makeTools(ctx: ToolContext) {
       run: wrap(ctx, "compare_campaigns", async (i: { as_of: string | null; group_by: "campaign" | "owner" | null }) => {
         const d = day(i.as_of);
         const table = await getCampaignTable(ctx.db, d);
-        if (i.group_by === "owner") return { data: byOwner(table.data), receipt: table.receipt };
+        if (i.group_by === "owner") {
+          const owners = byOwner(table.data);
+          const add = (k: "spend" | "registered" | "confirmed" | "attendees") => owners.reduce((s, o) => s + o[k], 0);
+          const t = { spend: add("spend"), registered: add("registered"), confirmed: add("confirmed"), attendees: add("attendees") };
+          const totals = { ...t, cost_per_attendee: t.attendees ? t.spend / t.attendees : null, note: "All owners together, Unattributed walk-ins excluded." };
+          const shares = owners.map((o) => ({ owner_name: o.owner_name, share_of_spend: t.spend ? o.spend / t.spend : null }));
+          return { data: { owners, totals, shares }, receipt: table.receipt };
+        }
         const flags = new Map((await getFlags(ctx.db, d)).data.map((f) => [f.campaign_id, f.flag]));
         const rows = table.data.map((r) => ({
           campaign_id: r.campaign_id, campaign: r.campaign_name, owner: r.owner_name, spend: r.spend,
@@ -111,7 +119,18 @@ export function makeTools(ctx: ToolContext) {
           attendees_per_1000: r.attendees_per_1000, active_days: r.active_days,
           flag: r.campaign_id ? flags.get(r.campaign_id) ?? null : null,
         }));
-        return { data: rows, receipt: table.receipt };
+        // Totals across the seven campaigns, so "all campaigns" questions need no adding up.
+        const camp = table.data.filter((r) => r.campaign_id);
+        const sum = (k: "spend" | "identified" | "registered" | "confirmed" | "cancelled" | "attendees") => camp.reduce((s, r) => s + (r[k] ?? 0), 0);
+        const all = { spend: sum("spend"), identified: sum("identified"), registered: sum("registered"), confirmed: sum("confirmed"), cancelled: sum("cancelled"), attendees: sum("attendees") };
+        const totals = {
+          ...all,
+          cost_per_registration: all.registered ? all.spend / all.registered : null,
+          cost_per_confirmed: all.confirmed ? all.spend / all.confirmed : null,
+          cost_per_attendee: all.attendees ? all.spend / all.attendees : null,
+          note: "All campaigns together, Unattributed walk-ins excluded.",
+        };
+        return { data: { campaigns: rows, totals }, receipt: table.receipt };
       }),
     }),
 
@@ -158,7 +177,17 @@ export function makeTools(ctx: ToolContext) {
       name: "get_targets",
       description: "The target version in force at a date, with actual, goal, attainment, straight-line expected-to-date and status (on track, at risk, behind, met, missed) for identified people, registrations, verified attendees and the marketing budget (actual spend against budget).",
       inputSchema: z.strictObject({ as_of: dateArg }),
-      run: wrap(ctx, "get_targets", async (i: { as_of: string | null }) => getTargetStatus(ctx.db, day(i.as_of))),
+      run: wrap(ctx, "get_targets", async (i: { as_of: string | null }) => {
+        const t = await getTargetStatus(ctx.db, day(i.as_of));
+        // The differences people ask about ("how much is left?"), so the model never subtracts.
+        const data = t.data.map((r) => ({
+          ...r,
+          ...(r.target === "marketing_budget"
+            ? { budget_left: r.goal - r.actual, share_spent: r.goal ? r.actual / r.goal : null }
+            : { still_needed: Math.max(r.goal - r.actual, 0), gap_to_straight_line: r.expected_to_date != null ? r.actual - r.expected_to_date : null }),
+        }));
+        return { data, receipt: t.receipt };
+      }),
     }),
 
     betaZodTool({
@@ -212,6 +241,23 @@ export function makeTools(ctx: ToolContext) {
           },
           receipt: inputs.receipt,
         };
+      }),
+    }),
+
+    betaZodTool({
+      ...common,
+      name: "calculate",
+      description: "Arithmetic on numbers that tools returned: shares, differences, sums, ratios. Use it instead of working anything out yourself, so every number in the answer comes from a tool. Only digits, + - * / and brackets.",
+      inputSchema: z.strictObject({
+        expression: z.string().max(300).describe("For example (725 / 2050) * 100"),
+        what: z.string().max(120).describe("What the result means, for example 'share of attendees who came both days, %'"),
+      }),
+      run: wrap(ctx, "calculate", async (i: { expression: string; what: string }) => {
+        const expr = i.expression.replace(/,/g, "").replace(/×/g, "*").replace(/÷/g, "/").trim();
+        if (!/^[\d\s.+\-*/()]+$/.test(expr) || !/\d/.test(expr)) throw new EditError("Use only numbers, + - * / and brackets");
+        const value = Function(`"use strict"; return (${expr});`)() as unknown;
+        if (typeof value !== "number" || !Number.isFinite(value)) throw new EditError("The expression has no finite result (division by zero?)");
+        return { data: { what: i.what, expression: expr, result: value, rounded_1dp: Math.round(value * 10) / 10, rounded_0dp: Math.round(value) } };
       }),
     }),
 
@@ -294,6 +340,9 @@ export function makeTools(ctx: ToolContext) {
         metric_value: z.number().nullable(),
       }),
       run: wrap(ctx, "propose_task", async (i: { title: string; campaign_id: string | null; owner: string | null; due_date: string | null; priority: "high" | "medium" | "low" | null; reason: string; metric_name: string | null; metric_value: number | null }) => {
+        // A card states facts; every number in its reason must come from a tool this turn.
+        const stray = ungroundedNumbers(i.reason, ctx.results);
+        if (stray.length) throw new EditError(`These numbers in the reason were not returned by any tool this turn: ${stray.join(", ")}. Get them from a tool (or leave them out) and propose again.`);
         const item = await proposeAction(ctx.db, {
           title: i.title, campaign_id: i.campaign_id, owner_id: i.owner, due_date: i.due_date, priority: i.priority,
           reason: i.reason, as_of: ctx.asOf,

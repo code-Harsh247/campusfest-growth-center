@@ -130,6 +130,15 @@ describe("reading answers", () => {
     expect(offersTask("Next: check the Plan screen.")).toBe(false);
   });
 
+  it("the grounding check skips date ranges in words and N-day settings (first eval's false failures)", () => {
+    expect(numbersIn("Both days (12 and 13 Apr 2025); the week of 24 Mar to 30 Mar 2025 had 354; a 28-day run rate").map((n) => n.text)).toEqual(["354"]);
+  });
+
+  it("a refusal that opens with 'The data can't tell us' is still a refusal", () => {
+    expect(parseAnswer("The data can't tell us the gender split, because no gender field is recorded.\nNeeded: A gender field.").kind).toBe("cannot");
+    expect(parseAnswer("The data shows 725 people came on both days.").kind).toBe("plain");
+  });
+
   it("the grounding check skips dates and IDs and catches a number from nowhere", () => {
     expect(numbersIn("As of 20 Apr 2025, C02 spent ₹93,000 over 7 days; 58.6% came; week 24–30 Mar").map((n) => n.text)).toEqual(["₹93,000".slice(1), "58.6%"]);
     const results = [JSON.stringify({ data: [{ spend: 93000, show_rate: 0.5862, cost_per_attendee: 273.53 }] })];

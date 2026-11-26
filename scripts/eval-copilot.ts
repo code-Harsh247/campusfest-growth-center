@@ -35,7 +35,7 @@ const CASES: Case[] = [
   { kind: "lookup", q: "What was Paid Social's show rate?", expect: ["58.6%", "50.0%"] },
   { kind: "lookup", q: "How many registrations did Organic Search get?", expect: ["250"] },
   { kind: "ranking", q: "Whose campaigns spent the most?", expect: ["Arjun Verma", "₹1,07,000"] },
-  { kind: "ranking", q: "Which week had the most registrations?", expect: [/24.{0,3}30 Mar/, "354"] },
+  { kind: "ranking", q: "Which week had the most registrations?", expect: [/24 Mar[^.\n]{0,30}30 Mar/, "354"] },
   { kind: "lookup", q: "How much budget is left?", expect: ["₹26,000", "₹3,00,000"] },
   { kind: "past", q: "What was the attendee target?", asOf: "2025-03-14", expect: ["1,800"] },
   { kind: "ranking", q: "Which campaign had the most cancellations?", expect: ["Paid Social", "60"] },
@@ -91,7 +91,7 @@ async function main() {
       if ((await listTasks(db, "2025-04-20")).length !== tasksBefore) why.push("a task was created without a click");
     }
     rows.push({ n: i + 1, kind: c.kind, pass: why.length === 0, why });
-    console.log(`${why.length ? "FAIL" : "pass"} ${i + 1}. ${c.q}${why.length ? `\n     ${why.join("; ")}\n     ${answer.replace(/\n/g, " | ").slice(0, 300)}` : ""}`);
+    console.log(`${why.length ? "FAIL" : "pass"} ${i + 1}. ${c.q}${why.length ? `\n     ${why.join("; ")}\n     ${answer.replace(/\n/g, " | ").slice(0, 900)}` : ""}`);
     await db.close();
   }
   const passed = rows.filter((r) => r.pass).length;
