@@ -1,8 +1,8 @@
 /**
  * The copilot's test set, run against the real model. Each run costs money
- * (roughly $0.08 a question with caching), so it is never part of `npm test`.
+ * (well under a cent a question on Haiku 5.5; about 8 cents on Opus 5.5), so it is never part of `npm test`.
  *
- *   ANTHROPIC_API_KEY=... npx tsx scripts/eval-copilot.ts [--only=3,7]
+ *   OPENROUTER_API_KEY=... npm run eval:copilot -- --only=3,7   (or ANTHROPIC_API_KEY)
  *
  * Expected answers come from the PRD, which took them from the independent
  * pandas check, not from this app. A question passes when every expected
@@ -11,7 +11,7 @@
  * unanswerable questions, a card and no new task for execution questions).
  * Pass bar: 95% overall, 100% on refusal and execution questions.
  */
-import Anthropic from "@anthropic-ai/sdk";
+import { copilotSettings, makeClient, providerName } from "../src/copilot/provider";
 import { listTasks, loadDataset, migrate, openPglite, parseSnapshot, updateRecord, type Db } from "../src/foundation";
 import { runCopilot, type ChatTurn, type CopilotEvent } from "../src/copilot/run";
 import { parseAnswer } from "../src/lib/answer";
@@ -66,9 +66,10 @@ async function freshDb(): Promise<Db> {
 }
 
 async function main() {
-  if (!process.env.ANTHROPIC_API_KEY) throw new Error("Set ANTHROPIC_API_KEY to run the eval (it costs money).");
+  if (!providerName()) throw new Error("Set OPENROUTER_API_KEY or ANTHROPIC_API_KEY to run the eval (it costs money).");
+  console.log(`Model: ${copilotSettings().model} via ${providerName()}, effort ${copilotSettings().effort}`);
   const only = process.argv.find((a) => a.startsWith("--only="))?.slice(7).split(",").map(Number);
-  const client = new Anthropic();
+  const client = makeClient();
   const rows: { n: number; kind: string; pass: boolean; why: string[] }[] = [];
   for (const [i, c] of CASES.entries()) {
     if (only && !only.includes(i + 1)) continue;

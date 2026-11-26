@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { listActionItems, listTasks, type Db } from "../src/foundation";
 import { runCopilot, type CopilotEvent } from "../src/copilot/run";
+import { copilotSettings, makeClient } from "../src/copilot/provider";
 import { offersTask, parseAnswer } from "../src/lib/answer";
 import { numbersIn, ungroundedNumbers } from "../src/lib/grounding";
 import { demoReply, startFake, type Recorded } from "../scripts/fake-anthropic";
@@ -17,10 +18,13 @@ beforeAll(async () => {
 });
 afterAll(async () => { fake.server.close(); await db.close(); });
 
-async function ask(question: string, history: { role: "user" | "assistant"; content: string }[] = []) {
+// Anthropic directly, on Opus: the one setup where the server-side fallback is sent.
+const OPUS_DIRECT = copilotSettings({ ANTHROPIC_API_KEY: "x", COPILOT_MODEL: "claude-opus-5-5" });
+
+async function ask(question: string, history: { role: "user" | "assistant"; content: string }[] = [], via = client, settings = OPUS_DIRECT) {
   const events: CopilotEvent[] = [];
   const from = fake.requests.length;
-  await runCopilot({ client, db, history, question, asOf: "2025-04-20", screen: "/campaigns", visitor: "test" }, (e) => events.push(e));
+  await runCopilot({ client: via, db, history, question, asOf: "2025-04-20", screen: "/campaigns", visitor: "test", settings }, (e) => events.push(e));
   return { events, requests: fake.requests.slice(from) as Recorded[] };
 }
 
@@ -80,6 +84,27 @@ describe("the copilot loop, against a scripted Messages API", () => {
     const p = parseAnswer(done && done.type === "done" ? done.answer : "");
     expect(p.kind).toBe("cannot");
     expect(p.needed).toMatch(/capacity/);
+  });
+
+  it("through OpenRouter: Haiku by default, the key as a bearer token, Anthropic pinned, no Anthropic-only fallback", async () => {
+    const env = { OPENROUTER_API_KEY: "or-fake-key", OPENROUTER_BASE_URL: fake.url };
+    const settings = copilotSettings(env);
+    expect(settings).toMatchObject({ provider: "openrouter", model: "anthropic/claude-haiku-5.5", serverFallback: false });
+    const { events, requests } = await ask("Which campaign should we cut?", [], makeClient(env), settings);
+    expect(events.at(-1)).toMatchObject({ type: "done", ungrounded: [] });
+    const first = requests[0];
+    expect(first.headers.authorization).toBe("Bearer or-fake-key");
+    expect(first.headers["x-api-key"]).toBeUndefined();
+    expect(first.body).toMatchObject({ model: "anthropic/claude-haiku-5.5", provider: { order: ["anthropic"] } });
+    expect(first.body).not.toHaveProperty("fallbacks");
+    expect(String(first.headers["anthropic-beta"] ?? "")).not.toContain("server-side-fallback");
+    expect(requests).toHaveLength(2);
+    expect(requests[1].body).toMatchObject({ provider: { order: ["anthropic"] } });
+  });
+
+  it("Haiku on Anthropic directly also leaves the fallback out; no key means chat is off", () => {
+    expect(copilotSettings({ ANTHROPIC_API_KEY: "x" })).toMatchObject({ provider: "anthropic", model: "claude-haiku-5-5", serverFallback: false });
+    expect(copilotSettings({ OPENROUTER_API_KEY: "a", ANTHROPIC_API_KEY: "b" }).provider).toBe("openrouter");
   });
 
   it("an API failure becomes a plain error event, and the log keeps it", async () => {

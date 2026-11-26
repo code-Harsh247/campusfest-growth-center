@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { logCopilot, type ActionItem, type Db, type Receipt } from "@/foundation";
 import { ungroundedNumbers } from "@/lib/grounding";
 import { SYSTEM_PROMPT, TOOL_LABEL } from "./prompt";
+import { copilotSettings, providerName, type CopilotSettings } from "./provider";
 import { MAX_TOOL_CALLS, makeTools, type ToolContext } from "./tools";
 
 /**
@@ -10,10 +11,7 @@ import { MAX_TOOL_CALLS, makeTools, type ToolContext } from "./tools";
  * the panel can show which tool is running and the answer as it is written.
  */
 
-export const MODEL = process.env.COPILOT_MODEL || "claude-opus-5-5";
-const EFFORT = (process.env.COPILOT_EFFORT || "medium") as "low" | "medium" | "high";
-
-export const copilotEnabled = () => !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+export const copilotEnabled = () => providerName() !== null;
 
 export interface ChatTurn {
   role: "user" | "assistant";
@@ -50,6 +48,8 @@ export interface RunArgs {
   focus?: string | null;
   visitor: string | null;
   signal?: AbortSignal;
+  /** Defaults to the environment's settings; tests pass their own. */
+  settings?: CopilotSettings;
 }
 
 const SCREEN_NAMES: Record<string, string> = { "/": "Overview", "/campaigns": "Campaigns", "/plan": "Plan", "/tasks": "Tasks", "/data": "Data" };
@@ -94,13 +94,14 @@ export async function runCopilot(a: RunArgs, emit: (e: CopilotEvent) => void): P
   let stopReason: string | null = null;
   let error: string | null = null;
 
+  const s = a.settings ?? copilotSettings();
   let runner = a.client.beta.messages.toolRunner({
-    model: MODEL,
+    model: s.model,
     max_tokens: 16000,
     max_iterations: MAX_TOOL_CALLS + 2,
-    output_config: { effort: EFFORT },
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
+    output_config: { effort: s.effort },
+    ...(s.serverFallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+    ...s.extraBody,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     tools: makeTools(ctx),
     messages,

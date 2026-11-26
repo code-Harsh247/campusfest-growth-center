@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { checkAsOf, dataVersion, listTeam, AsOfError } from "@/foundation";
 import { copilotEnabled, runCopilot, type ChatTurn, type CopilotEvent } from "@/copilot/run";
+import { makeClient } from "@/copilot/provider";
 import { getDb } from "@/server/db";
 import { take, visitorId } from "@/server/ratelimit";
 
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`)); } catch { /* the reader left */ }
       };
       await runCopilot({
-        client: new Anthropic({ maxRetries: 2 }), db, history: cleanHistory(body.history), question, asOf,
+        client: makeClient(), db, history: cleanHistory(body.history), question, asOf,
         screen: typeof body.screen === "string" ? body.screen.slice(0, 40) : "/",
         focus: typeof body.focus === "string" ? body.focus.slice(0, 300) : null,
         visitor, signal: req.signal,

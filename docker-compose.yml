@@ -28,8 +28,10 @@ services:
     environment:
       DATABASE_URL: postgres://growth:${POSTGRES_PASSWORD}@db:5432/growth
       # The copilot is off (and says so) until a key is set in .env.
+      # OpenRouter is used when its key is set; Claude Haiku 5.5 is the default model.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      COPILOT_MODEL: ${COPILOT_MODEL:-claude-opus-5-5}
+      COPILOT_MODEL: ${COPILOT_MODEL:-}
       COPILOT_EFFORT: ${COPILOT_EFFORT:-medium}
       COPILOT_PER_VISITOR_HOURLY: ${COPILOT_PER_VISITOR_HOURLY:-20}
       COPILOT_HOURLY_LIMIT: ${COPILOT_HOURLY_LIMIT:-150}
